@@ -8,7 +8,7 @@ import './index.css'
 // Pages
 import LandingPage from './pages/LandingPage'
 import ProjectListPage from './pages/ProjectListPage'
-import IncubatorPage from './pages/IncubatorPage'
+import IncubatorWorkspacePage from './pages/IncubatorWorkspacePage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 
@@ -60,7 +60,7 @@ function App() {
             element={
               <ProtectedRoute>
                 <MainLayout>
-                  <IncubatorPage />
+                  <IncubatorWorkspacePage />
                 </MainLayout>
               </ProtectedRoute>
             }

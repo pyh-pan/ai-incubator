@@ -1,4 +1,6 @@
 import apiClient from './client'
+export { incubatorApi } from './incubator'
+
 import type {
   User,
   Project,
