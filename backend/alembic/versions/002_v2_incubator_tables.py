@@ -38,7 +38,7 @@ suggestion_status = sa.Enum("pending", "accepted", "rejected", name="suggestion_
 
 def upgrade() -> None:
     """Upgrade database."""
-    op.add_column("projects", sa.Column("system_context_version", sa.Integer(), nullable=False, server_default="1"))
+    op.add_column("projects", sa.Column("system_context_version", sa.String(), nullable=False, server_default="v2.0"))
     op.add_column("projects", sa.Column("thinking_stage", sa.String(), nullable=True))
     op.add_column("projects", sa.Column("thinking_mode", sa.String(), nullable=True))
     op.add_column("projects", sa.Column("summary_snapshot", postgresql.JSONB(astext_type=sa.Text()), nullable=True))
