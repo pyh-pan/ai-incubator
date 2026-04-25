@@ -7,3 +7,5 @@ htmlcov/
 dist/
 *.db
 .test
+.gstack/
+.codex
