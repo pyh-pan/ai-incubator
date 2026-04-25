@@ -1,9 +1,10 @@
 import { Outlet, useNavigate } from 'react-router-dom'
-import { Layout, Menu, Button, Avatar, Dropdown } from 'antd'
+import { Layout, Menu, Avatar, Dropdown } from 'antd'
 import { LogoutOutlined, UserOutlined, PlusOutlined } from '@ant-design/icons'
+import type { ReactNode } from 'react'
 import { useAuthStore } from '../../stores/authStore'
 
-export default function MainLayout() {
+export default function MainLayout({ children }: { children?: ReactNode }) {
   const navigate = useNavigate()
   const { user, clearAuth } = useAuthStore()
 
@@ -77,7 +78,7 @@ export default function MainLayout() {
       </Layout.Header>
 
       <Layout.Content className="p-6">
-        <Outlet />
+        {children ?? <Outlet />}
       </Layout.Content>
     </Layout>
   )

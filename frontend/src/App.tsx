@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './stores/authStore'
 
@@ -7,7 +8,7 @@ import './index.css'
 // Pages
 import LandingPage from './pages/LandingPage'
 import ProjectListPage from './pages/ProjectListPage'
-import IncubatorPage from './pages/IncubatorPage'
+import IncubatorWorkspacePage from './pages/IncubatorWorkspacePage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 
@@ -23,7 +24,7 @@ const queryClient = new QueryClient({
   },
 })
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+function ProtectedRoute({ children }: { children: ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
 
   if (!isAuthenticated) {
@@ -59,7 +60,7 @@ function App() {
             element={
               <ProtectedRoute>
                 <MainLayout>
-                  <IncubatorPage />
+                  <IncubatorWorkspacePage />
                 </MainLayout>
               </ProtectedRoute>
             }

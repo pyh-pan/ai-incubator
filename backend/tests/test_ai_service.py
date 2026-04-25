@@ -17,16 +17,16 @@ class TestFrameworkRecommendation:
         """Test recommending framework for generic idea."""
         result = AIService.recommend_framework("I have a new idea")
         assert "framework" in result
-        assert result["framework"] == "product_manager"  # Default fallback
+        assert result["framework"] == "general"
 
 
 class TestQuestionGeneration:
     """Test question generation."""
 
-    def test_generate_question_product_manager(self):
-        """Test generating question for product manager framework."""
+    def test_generate_question_uses_generic_fallback(self):
+        """Test generating a generic question without framework templates."""
         result = AIService.generate_question(
-            framework="product_manager",
+            framework="general",
             context="AI diary app",
             label="目标用户"
         )

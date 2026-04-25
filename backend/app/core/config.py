@@ -29,8 +29,12 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
 
     # AI
+    AI_PROVIDER: str = "openai"
     OPENAI_API_KEY: str = ""
     OPENAI_MODEL: str = "gpt-4"
+    GLM_API_KEY: str = ""
+    GLM_API_BASE: str = "https://open.bigmodel.cn/api/paas/v4/"
+    GLM_MODEL: str = "glm-4"
 
     # CORS
     CORS_ORIGINS: list[str] = ["http://localhost:5173", "http://localhost:3000"]

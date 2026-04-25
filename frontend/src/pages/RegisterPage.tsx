@@ -1,12 +1,16 @@
-import { useState } from 'react'
 import { Form, Input, Button, message, Card, Typography } from 'antd'
 import { useNavigate, Link } from 'react-router-dom'
 import { UserOutlined, LockOutlined } from '@ant-design/icons'
 import { useMutation } from '@tanstack/react-query'
 import { authApi } from '../api'
+import type { ApiError, RegisterRequest } from '../types'
 import { useAuthStore } from '../stores/authStore'
 
 const { Text } = Typography
+
+interface RegisterFormValues extends RegisterRequest {
+  confirmPassword: string
+}
 
 export default function RegisterPage() {
   const navigate = useNavigate()
@@ -20,13 +24,18 @@ export default function RegisterPage() {
       message.success('注册成功')
       navigate('/projects')
     },
-    onError: (error: any) => {
+    onError: (error: ApiError) => {
       message.error(error.response?.data?.detail || '注册失败')
     },
   })
 
-  const onFinish = (values: any) => {
-    registerMutation.mutate(values)
+  const onFinish = (values: RegisterFormValues) => {
+    const request: RegisterRequest = {
+      email: values.email,
+      username: values.username,
+      password: values.password,
+    }
+    registerMutation.mutate(request)
   }
 
   return (
@@ -95,7 +104,8 @@ export default function RegisterPage() {
                   }
                   return Promise.reject(new Error('两次输入的密码不一致'))
                 },
-              })}
+              }),
+            ]}
           >
             <Input.Password
               prefix={<LockOutlined className="text-slate-400" />}

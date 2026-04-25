@@ -89,7 +89,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
 - `GET /{id}/children` - 获取子节点
 
 ### AI `/api/ai`
-- `POST /recommend-framework` - 推荐框架
+- `POST /recommend-framework` - 兼容接口，返回 general
 - `POST /generate-question` - 生成问题
 - `POST /extract-points` - 提炼观点
 - `POST /followup/{id}` - 生成追问
@@ -158,7 +158,8 @@ backend/
 - id: UUID
 - user_id: 用户ID (外键)
 - title: 项目标题
-- framework: 思维框架
+- more_info: 可选背景信息
+- framework: 兼容字段，当前固定为 general
 - status: active/archived
 - created_at, updated_at
 

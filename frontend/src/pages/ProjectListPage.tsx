@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { Button, Card, Modal, Form, Input, Select, message, Empty, Tag, Popconfirm } from 'antd'
+import { Button, Card, Modal, Form, Input, message, Empty, Popconfirm } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import { PlusOutlined, DeleteOutlined, RocketOutlined } from '@ant-design/icons'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { projectApi } from '../api'
-import type { FrameworkType, Project } from '../types'
+import type { ApiError, Project } from '../types'
 import { formatDistanceToNow } from 'date-fns'
 
 const { TextArea } = Input
@@ -22,13 +22,14 @@ export default function ProjectListPage() {
 
   const createMutation = useMutation({
     mutationFn: projectApi.create,
-    onSuccess: () => {
+    onSuccess: (project) => {
       message.success('项目创建成功')
       setIsModalOpen(false)
       form.resetFields()
-      queryClient.invalidateQueries(['projects'])
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      navigate(`/projects/${project.id}`)
     },
-    onError: (error: any) => {
+    onError: (error: ApiError) => {
       message.error(error.response?.data?.detail || '创建失败')
     },
   })
@@ -37,27 +38,23 @@ export default function ProjectListPage() {
     mutationFn: projectApi.delete,
     onSuccess: () => {
       message.success('项目已删除')
-      queryClient.invalidateQueries(['projects'])
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
     },
-    onError: (error: any) => {
+    onError: (error: ApiError) => {
       message.error(error.response?.data?.detail || '删除失败')
     },
   })
 
-  const handleCreate = (values: any) => {
-    createMutation.mutate(values)
+  const handleCreate = (values: { title: string; more_info?: string }) => {
+    createMutation.mutate({
+      title: values.title,
+      more_info: values.more_info?.trim() || undefined,
+    })
   }
 
   const handleDelete = (id: string) => {
     deleteMutation.mutate(id)
   }
-
-  const frameworkOptions: { label: string; value: FrameworkType }[] = [
-    { label: '产品经理框架', value: 'product_manager' },
-    { label: '商业模式画布', value: 'business_canvas' },
-    { label: '技术可行性', value: 'technical_feasibility' },
-    { label: '苏格拉底式追问', value: 'socratic' },
-  ]
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -99,7 +96,7 @@ export default function ProjectListPage() {
                 <Popconfirm
                   title="确定删除这个项目吗？"
                   onConfirm={(e) => {
-                    e.stopPropagation()
+                    e?.stopPropagation()
                     handleDelete(project.id)
                   }}
                   okText="确定"
@@ -120,11 +117,15 @@ export default function ProjectListPage() {
                 <div className="w-10 h-10 bg-sky-100 rounded-lg flex items-center justify-center">
                   <RocketOutlined className="text-sky-600" />
                 </div>
-                <Tag color="sky">{frameworkOptions.find(f => f.value === project.framework)?.label}</Tag>
               </div>
               <h3 className="text-lg font-semibold text-slate-800 mb-2 line-clamp-2">
                 {project.title}
               </h3>
+              {project.more_info ? (
+                <p className="text-sm text-slate-600 mb-3 line-clamp-2">
+                  {project.more_info}
+                </p>
+              ) : null}
               <p className="text-sm text-slate-500">
                 创建于 {formatDistanceToNow(new Date(project.created_at), { addSuffix: true })}
               </p>
@@ -159,12 +160,15 @@ export default function ProjectListPage() {
           </Form.Item>
 
           <Form.Item
-            name="framework"
-            label="思维框架"
-            rules={[{ required: true, message: '请选择思维框架' }]}
-            initialValue="product_manager"
+            name="more_info"
+            label="背景信息"
           >
-            <Select options={frameworkOptions} placeholder="选择一个思维框架" />
+            <TextArea
+              rows={4}
+              placeholder="补充目标用户、已有想法、约束条件或目前最困惑的地方（可选）"
+              showCount
+              maxLength={1000}
+            />
           </Form.Item>
 
           <Form.Item className="mb-0">

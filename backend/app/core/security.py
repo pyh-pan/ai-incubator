@@ -1,12 +1,15 @@
 from datetime import datetime, timedelta
 from typing import Any
+from uuid import UUID
 
-from jose import jwt
-from passlib.context import CryptContext
+import bcrypt
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import JWTError, jwt
 
 from app.core.config import settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+security = HTTPBearer(auto_error=False)
 
 
 def create_access_token(subject: str | Any, expires_delta: timedelta | None = None) -> str:
@@ -23,9 +26,40 @@ def create_access_token(subject: str | Any, expires_delta: timedelta | None = No
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against a hash."""
-    return pwd_context.verify(plain_password, hashed_password)
+    password_bytes = plain_password.encode("utf-8")
+    hashed_bytes = hashed_password.encode("utf-8") if isinstance(hashed_password, str) else hashed_password
+    return bcrypt.checkpw(password_bytes, hashed_bytes)
 
 
 def get_password_hash(password: str) -> str:
     """Hash a password."""
-    return pwd_context.hash(password)
+    password_bytes = password.encode("utf-8")
+    return bcrypt.hashpw(password_bytes, bcrypt.gensalt()).decode("utf-8")
+
+
+def decode_token(token: str) -> UUID:
+    """Decode a JWT access token and return its subject as a UUID."""
+    credentials_error = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        subject = payload.get("sub")
+        if subject is None:
+            raise credentials_error
+        return UUID(str(subject))
+    except (JWTError, ValueError) as exc:
+        raise credentials_error from exc
+
+
+def get_current_user_id(credentials: HTTPAuthorizationCredentials | None = Depends(security)) -> UUID:
+    """Get the current user id from a bearer token."""
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return decode_token(credentials.credentials)

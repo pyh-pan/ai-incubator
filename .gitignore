@@ -1,4 +1,13 @@
 .superpowers/
 .worktrees/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+htmlcov/
+.coverage
+dist/
+*.db
+.test
 .gstack/
 .codex
