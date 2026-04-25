@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 
 class FrameworkType(str, Enum):
+    GENERAL = "general"
     PRODUCT_MANAGER = "product_manager"
     BUSINESS_CANVAS = "business_canvas"
     TECHNICAL_FEASIBILITY = "technical_feasibility"
@@ -13,7 +14,7 @@ class FrameworkType(str, Enum):
 
 class ProjectCreate(BaseModel):
     title: str
-    framework: FrameworkType
+    framework: FrameworkType = FrameworkType.GENERAL
 
 
 class ProjectUpdate(BaseModel):

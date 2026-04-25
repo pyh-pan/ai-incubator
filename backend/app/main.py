@@ -7,6 +7,7 @@ from app.api.ai import router as ai_router
 from app.api.auth import router as auth_router
 from app.api.nodes import router as nodes_router
 from app.api.projects import router as projects_router
+from app.api.v2 import router as v2_router
 from app.core.config import settings
 
 
@@ -38,6 +39,7 @@ app.include_router(auth_router)
 app.include_router(projects_router)
 app.include_router(nodes_router)
 app.include_router(ai_router)
+app.include_router(v2_router, prefix="/api")
 
 
 @app.get("/")
