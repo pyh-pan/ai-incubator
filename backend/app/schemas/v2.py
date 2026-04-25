@@ -51,14 +51,14 @@ class ConversationMessageResponse(BaseModel):
 
 class MapOperation(BaseModel):
     type: OperationType
-    node_id: str | None = None
-    parent_id: str | None = None
+    node_id: UUID | None = None
+    parent_id: UUID | None = None
     title: str | None = None
     kind: NodeKind | None = None
     status: NodeStatus | None = None
     summary: str | None = None
     question: str | None = None
-    source_node_ids: list[str] = Field(default_factory=list)
+    source_node_ids: list[UUID] = Field(default_factory=list)
 
 
 class RestructureSuggestionResponse(BaseModel):
@@ -77,7 +77,7 @@ class RestructureSuggestionResponse(BaseModel):
 class TurnRequest(BaseModel):
     content: str = Field(min_length=1, max_length=8000)
     source: MessageSource = "chat"
-    node_id: str | None = None
+    node_id: UUID | None = None
 
 
 class CurrentSummary(BaseModel):

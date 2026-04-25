@@ -1,10 +1,12 @@
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import get_args
 from uuid import UUID, uuid4
 
-from typing import get_args
+import pytest
+from pydantic import ValidationError
 
-from app.schemas.v2 import ConversationMessageResponse, RestructureSuggestionResponse, ThinkingNodeResponse, WorkspaceResponse
+from app.schemas.v2 import ConversationMessageResponse, MapOperation, RestructureSuggestionResponse, ThinkingNodeResponse, TurnRequest, WorkspaceResponse
 from app.schemas.v2 import ThinkingMode, ThinkingStage
 
 
@@ -119,3 +121,23 @@ def test_uuid_fields_serialize_to_json_strings():
     )
 
     assert f'"project_id":"{project_id}"' in workspace.model_dump_json()
+
+
+def test_map_operation_rejects_invalid_node_id_uuid():
+    with pytest.raises(ValidationError):
+        MapOperation(type="update_node", node_id="not-a-uuid", summary="Updated summary")
+
+
+def test_map_operation_rejects_invalid_parent_id_uuid():
+    with pytest.raises(ValidationError):
+        MapOperation(type="move_node", node_id=str(uuid4()), parent_id="not-a-uuid")
+
+
+def test_map_operation_rejects_invalid_source_node_ids_uuid():
+    with pytest.raises(ValidationError):
+        MapOperation(type="merge_nodes", source_node_ids=[str(uuid4()), "not-a-uuid"])
+
+
+def test_turn_request_rejects_invalid_node_id_uuid():
+    with pytest.raises(ValidationError):
+        TurnRequest(content="Continue", node_id="not-a-uuid")
