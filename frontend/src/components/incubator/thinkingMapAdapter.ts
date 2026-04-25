@@ -44,13 +44,22 @@ export function buildMindElixirData(nodes: ThinkingNode[]): MindElixirData {
   let root: NodeObj | null = null
 
   nodes.forEach((node) => {
-    const current = byId.get(node.id)!
+    const current = byId.get(node.id)
+    if (!current) return
+
     if (!node.parent_id || !byId.has(node.parent_id)) {
       if (!root) root = current
       return
     }
-    byId.get(node.parent_id)!.children!.push(current)
+
+    const parent = byId.get(node.parent_id)
+    parent?.children?.push(current)
   })
 
-  return { nodeData: root ?? byId.values().next().value! }
+  const fallbackRoot = byId.values().next().value
+  if (!fallbackRoot) {
+    return { nodeData: { id: 'root', topic: 'Untitled idea', children: [] } }
+  }
+
+  return { nodeData: root ?? fallbackRoot }
 }

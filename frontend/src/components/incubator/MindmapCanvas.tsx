@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import MindElixir from 'mind-elixir'
 import 'mind-elixir/style.css'
 import type { MindElixirInstance, NodeObj } from 'mind-elixir'
@@ -37,8 +37,13 @@ export default function MindmapCanvas({ nodes, selectedNodeId, onSelectNode }: M
   const instanceRef = useRef<MindElixirInstance | null>(null)
   const nodeMapRef = useRef(new Map<string, ThinkingNode>())
   const [failed, setFailed] = useState(false)
+  const setCanvasFailed = useCallback((value: boolean) => {
+    queueMicrotask(() => setFailed(value))
+  }, [])
 
-  nodeMapRef.current = new Map(nodes.map((node) => [node.id, node]))
+  useEffect(() => {
+    nodeMapRef.current = new Map(nodes.map((node) => [node.id, node]))
+  }, [nodes])
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -68,11 +73,11 @@ export default function MindmapCanvas({ nodes, selectedNodeId, onSelectNode }: M
       }
 
       instanceRef.current.toCenter()
-      setFailed(false)
+      setCanvasFailed(false)
     } catch {
-      setFailed(true)
+      setCanvasFailed(true)
     }
-  }, [nodes, onSelectNode])
+  }, [nodes, onSelectNode, setCanvasFailed])
 
   useEffect(() => {
     return () => {

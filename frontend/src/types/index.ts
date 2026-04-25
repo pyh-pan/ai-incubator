@@ -25,8 +25,11 @@ export interface ApiResponse<T> {
 }
 
 export interface ApiError {
-  detail: string
-  status_code: number
+  response?: {
+    data?: {
+      detail?: string
+    }
+  }
 }
 
 // Auth types

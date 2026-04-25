@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { PlusOutlined, DeleteOutlined, RocketOutlined } from '@ant-design/icons'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { projectApi } from '../api'
-import type { Project } from '../types'
+import type { ApiError, Project } from '../types'
 import { formatDistanceToNow } from 'date-fns'
 
 const { TextArea } = Input
@@ -29,7 +29,7 @@ export default function ProjectListPage() {
       queryClient.invalidateQueries({ queryKey: ['projects'] })
       navigate(`/projects/${project.id}`)
     },
-    onError: (error: any) => {
+    onError: (error: ApiError) => {
       message.error(error.response?.data?.detail || '创建失败')
     },
   })
@@ -40,7 +40,7 @@ export default function ProjectListPage() {
       message.success('项目已删除')
       queryClient.invalidateQueries({ queryKey: ['projects'] })
     },
-    onError: (error: any) => {
+    onError: (error: ApiError) => {
       message.error(error.response?.data?.detail || '删除失败')
     },
   })

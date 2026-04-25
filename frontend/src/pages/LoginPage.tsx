@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { UserOutlined, LockOutlined } from '@ant-design/icons'
 import { useMutation } from '@tanstack/react-query'
 import { authApi } from '../api'
+import type { ApiError, LoginRequest } from '../types'
 import { useAuthStore } from '../stores/authStore'
 
 const { Text } = Typography
@@ -19,12 +20,12 @@ export default function LoginPage() {
       message.success('登录成功')
       navigate('/projects')
     },
-    onError: (error: any) => {
+    onError: (error: ApiError) => {
       message.error(error.response?.data?.detail || '登录失败')
     },
   })
 
-  const onFinish = (values: any) => {
+  const onFinish = (values: LoginRequest) => {
     loginMutation.mutate(values)
   }
 

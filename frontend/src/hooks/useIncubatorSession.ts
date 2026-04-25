@@ -1,15 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { message } from 'antd'
 import { incubatorApi } from '../api/incubator'
+import type { ApiError } from '../types'
 import type { TurnRequest, WorkspaceResponse } from '../types/incubator'
-
-interface ApiError {
-  response?: {
-    data?: {
-      detail?: string
-    }
-  }
-}
 
 export function useIncubatorSession(projectId: string | undefined) {
   const queryClient = useQueryClient()
