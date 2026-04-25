@@ -22,6 +22,23 @@ def test_update_node_requires_update_payload():
         validate_operation_risk(operation)
 
 
+def test_update_node_with_summary_remains_low_risk():
+    operation = MapOperation(type="update_node", node_id=str(uuid.uuid4()), summary="Updated summary")
+    assert validate_operation_risk(operation) == "low"
+
+
+def test_update_node_rejects_title_payload():
+    operation = MapOperation(type="update_node", node_id=str(uuid.uuid4()), title="Renamed node")
+    with pytest.raises(ValueError, match="rename_node"):
+        validate_operation_risk(operation)
+
+
+def test_update_node_rejects_parent_id_payload():
+    operation = MapOperation(type="update_node", node_id=str(uuid.uuid4()), parent_id=str(uuid.uuid4()))
+    with pytest.raises(ValueError, match="move_node"):
+        validate_operation_risk(operation)
+
+
 def test_mark_answered_requires_node_id():
     operation = MapOperation(type="mark_answered")
     with pytest.raises(ValueError, match="node_id"):

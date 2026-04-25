@@ -14,13 +14,15 @@ def validate_operation_risk(operation: MapOperation) -> str:
     if operation.type == "update_node":
         if not operation.node_id:
             raise ValueError("update_node requires node_id")
+        if operation.title:
+            raise ValueError("update_node cannot rename nodes; use rename_node")
+        if operation.parent_id:
+            raise ValueError("update_node cannot move nodes; use move_node")
         update_fields = (
-            operation.title,
             operation.summary,
             operation.question,
             operation.status,
             operation.kind,
-            operation.parent_id,
         )
         if not any(update_fields):
             raise ValueError("update_node requires at least one update payload")

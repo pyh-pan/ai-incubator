@@ -41,8 +41,8 @@ class ConversationMessageResponse(BaseModel):
     role: MessageRole
     source: str
     content: str
-    thinking_mode: str | None
-    stage: str | None
+    thinking_mode: ThinkingMode | None
+    stage: ThinkingStage | None
     message_metadata: dict[str, Any] | None
     created_at: datetime
 
@@ -108,10 +108,10 @@ class AIOrchestratorOutput(BaseModel):
 
 
 class WorkspaceResponse(BaseModel):
-    project_id: str
+    project_id: UUID
     title: str
-    thinking_mode: str | None
-    thinking_stage: str | None
+    thinking_mode: ThinkingMode | None
+    thinking_stage: ThinkingStage | None
     messages: list[ConversationMessageResponse]
     nodes: list[ThinkingNodeResponse]
     suggestions: list[RestructureSuggestionResponse]
