@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> Historical note: this completed plan records the selective remote-fix fusion that landed in `ebef6d4`. It is not an active implementation checklist.
+
 **Goal:** Selectively port the useful fixes from the remote v1.2 line into the current v2 incubator without restoring fixed user-visible framework flows.
 
 **Architecture:** Keep `ai_service.py` as the lightweight provider/client boundary and keep `incubator_orchestrator.py` as the v2 intelligence coordinator. Add a small internal question strategy module that supplies concrete fallback questions, duplicate detection, and titles based on current thinking mode rather than exposed framework names.

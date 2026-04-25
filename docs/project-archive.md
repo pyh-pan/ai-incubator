@@ -13,7 +13,7 @@ The current product direction is intentionally simple: one fixed, general thinki
 - Local development and automated tests must not depend on live AI providers. Model failures should fall back to deterministic behavior.
 - Authentication errors should be explicit and consistent, especially for missing or invalid tokens.
 - UI behavior around the workspace should remain stable after answering nodes, creating follow-ups, and refreshing data.
-- React Flow interactions need regression coverage when layout, node state, handles, or edges change.
+- Map renderer interactions need regression coverage when layout, node state, selection, or branches change.
 - End-to-end tests should cover only critical user journeys and use stable selectors.
 - Documentation should record decisions and constraints, not duplicate the full code structure.
 

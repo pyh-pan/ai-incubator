@@ -1,6 +1,7 @@
 # Fusion Refactor Plan
 
 Date: 2026-04-25
+Status: Completed historical plan. The current implementation has been merged to `main`; use the README files and PRD for current project documentation.
 
 ## Goal
 

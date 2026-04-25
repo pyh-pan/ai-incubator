@@ -1,8 +1,10 @@
 # AI Incubator v2 Design
 
 Date: 2026-04-25
-Status: Approved design draft
+Status: Historical approved design draft
 Scope: v2 MVP usable loop
+
+> This is a historical implementation design written before the v2 refactor landed. It describes the old application state as context for the refactor, not the current codebase. For current setup and architecture, use `README.md`, `backend/README.md`, `frontend/README.md`, and `docs/prd/PRD.md`.
 
 ## 1. Current State
 

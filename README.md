@@ -1,132 +1,111 @@
-# AI Incubator（想法孵化器）
+# AI Incubator
 
-## 项目简介
+AI Incubator is a full-stack idea incubation workspace. It helps users clarify vague ideas through focused AI questions, a visual thinking map, and a structured conversation history.
 
-AI Incubator 是一个 AI 驱动的想法完善工具，通过**提问刺激用户思考**，以**思维导图作为可视化工具**，帮助用户将模糊的想法孵化成可执行的概念。
+The current product direction is intentionally simple: one fixed general thinking approach, no user-visible framework picker, and deterministic fallback behavior when external AI providers are unavailable.
 
-### 核心价值
+## Current Capabilities
 
-- **不代替用户思考** - 让用户看到自己的思考
-- **提供思考的"脚手架"** - 帮助用户从模糊到清晰
-- **外部化是核心** - 通过思维导图让思考过程可视化
-- **完全跟随用户的思考方向** - 动态适应，非静态框架
+- Email/password authentication with JWT bearer tokens.
+- Project creation with a title and optional background context.
+- A v2 incubation workspace at `/projects/:projectId` with:
+  - chat-based thinking turns;
+  - MindElixir-powered thinking map visualization;
+  - node inspector for full question and summary details;
+  - pending restructure suggestions that require user acceptance.
+- Provider-aware AI calls for OpenAI or GLM, with local fallback output for development and tests.
+- Backend and frontend regression tests for auth, v2 API contracts, map updates, fallback behavior, and frontend adapters/stores.
 
----
+## Project Structure
 
-## 项目结构
-
-```
+```text
 ai-incubator/
-├── README.md              # 项目说明文件
-└── docs/
-    ├── prd/
-    │   └── PRD.md        # 产品需求文档
-    ├── design/            # 设计文档（UI/UX）
-    └── research/          # 研究资料（用户访谈、市场分析等）
+├── AGENTS.md                 # Contributor and agent workflow rules
+├── backend/                  # FastAPI, SQLAlchemy, pytest
+├── frontend/                 # React, Vite, MindElixir, Vitest
+├── docs/
+│   ├── prd/PRD.md            # Current product requirements
+│   ├── fusion-refactor-plan.md
+│   └── project-archive.md    # Historical notes, not active instructions
+└── README.md
 ```
 
----
+## Tech Stack
 
-## 核心功能
+### Frontend
 
-### 1. 框架选择与初始化
-- 用户输入初始想法
-- AI 推荐并提供思维框架选项
-- 支持框架：产品经理框架、商业模式画布、技术可行性分析、苏格拉底式追问
+- React 19 + TypeScript
+- Vite 7
+- React Router 7
+- TanStack Query 5
+- Zustand 5
+- Ant Design 6
+- MindElixir 5
+- TailwindCSS 3
+- Axios
+- Vitest + React Testing Library
 
-### 2. 思维导图可视化
-- 以思维导图形式展示想法结构
-- 分支状态标识（未回答/进行中/已回答）
-- 自动延伸子问题
+### Backend
 
-### 3. 悬停探索交互
-- 鼠标悬停显示问题详情卡片
-- 非侵入式设计（移开即消失）
-- 展示背景信息、案例、相关资料
+- FastAPI 0.115
+- Python 3.11+ with Python 3.13-compatible dependencies
+- SQLAlchemy 2
+- PostgreSQL in normal development; SQLite is used by tests
+- Alembic migrations
+- OpenAI-compatible client for OpenAI and GLM
+- JWT auth with `python-jose`
+- pytest
 
-### 4. 点击固定与回答
-- 点击分支后固定卡片在屏幕
-- 用户输入回答，AI 自动提炼核心观点
-- 自动生成下一级追问
+## Quick Start
 
-### 5. 分支自由切换
-- 支持非线性探索
-- 可回溯已回答分支
-- 保留完整思维演化历史
+### Backend
 
----
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+alembic upgrade head
+uvicorn app.main:app --reload
+```
 
-## 目标用户
+API docs: http://localhost:8000/docs
 
-- **产品经理/创业者** - 孵化产品/商业想法
-- **研究人员** - 完善研究课题和方法论
-- **创作者** - 发展创意概念（小说、画作等）
-- **学生** - 学术论文、毕业设计的选题与框架
-- **终身学习者** - 个人规划、技能学习路径设计
+### Frontend
 
----
+```bash
+cd frontend
+npm install
+cp .env.example .env
+npm run dev
+```
 
-## 技术栈
+Frontend dev server: http://localhost:5173
 
-### 前端
-- **框架**: React 18 + TypeScript
-- **构建工具**: Vite 7
-- **路由**: React Router v7
-- **状态管理**: Zustand 5
-- **思维导图**: React Flow 11
-- **UI 组件**: Ant Design 6
-- **样式**: TailwindCSS 3 + 淡蓝色主题
-- **HTTP 客户端**: Axios
-- **测试**: Vitest + React Testing Library
+## Test Commands
 
-### 后端
-- **框架**: FastAPI 0.115 (Python 3.11+)
-- **ORM**: SQLAlchemy 2.0
-- **数据库**: PostgreSQL 15
-- **迁移工具**: Alembic 1.13
-- **AI 集成**: OpenAI API (GPT-4)
-- **认证**: JWT (python-jose) + Passlib
-- **测试**: pytest + pytest-asyncio
+```bash
+cd backend
+DATABASE_URL=sqlite:///./baseline_test.db .venv/bin/python -m pytest -q -o addopts=''
+```
 
-### 数据库
-- **PostgreSQL 15** - 5张核心表:
-  - users (用户表)
-  - projects (项目表)
-  - mindmap_nodes (思维导图节点表)
-  - conversation_history (对话历史表)
-  - evolution_history (演化历史表)
+```bash
+cd frontend
+npm run lint
+npm test -- --run
+npm run build
+```
 
----
+## Documentation
 
-## 开发阶段
-
-### MVP 阶段（4-6 周）
-
-- **Phase 1**: 框架选择 + 基础思维导图展示
-- **Phase 2**: 悬停探索 + 点击回答
-- **Phase 3**: 分支延伸 + 自由切换
-- **Phase 4**: AI 问答集成
-
-### 后续版本
-
-- **V1.1**: 协作功能（多人实时协作、评论讨论）
-- **V1.2**: 导出功能（PDF、图片、结构化报告）
-- **V2.0**: 智能推荐（AI 隐式识别、动态生成框架）
-
----
-
-## 文档导航
-
-- [产品需求文档 (PRD)](./docs/prd/PRD.md) - 详尽的产品功能、交互设计、技术实现要点
-
----
-
-## 联系方式
-
-- 项目负责人：
-- 技术负责人：
-
----
-
-**文档版本**: v1.0
-**最后更新**: 2026-02-13
+- [AGENTS.md](./AGENTS.md) - durable contributor and agent rules.
+- [Backend README](./backend/README.md) - backend setup, API surface, and services.
+- [Frontend README](./frontend/README.md) - frontend setup and UI structure.
+- [PRD](./docs/prd/PRD.md) - current product requirements.
+- [Current implementation summary](./COMPLETION_REPORT.md) - shipped capabilities and verification baseline.
+- [Fusion refactor plan](./docs/fusion-refactor-plan.md) - completed historical merge plan.
+- [Project archive](./docs/project-archive.md) - historical context and deferred ideas.
+- [V2 design draft](./docs/superpowers/specs/2026-04-25-ai-incubator-v2-design.md) - historical v2 design artifact.
+- [V2 implementation plan](./docs/superpowers/plans/2026-04-25-ai-incubator-v2.md) - historical implementation plan.
+- [Remote fixes fusion plan](./docs/superpowers/plans/2026-04-26-remote-fixes-v2-fusion.md) - completed historical fusion plan.

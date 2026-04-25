@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> Historical note: this plan records the original v2 implementation work. It is not the current project guide. Use the root README and focused backend/frontend README files for current commands and architecture.
+
 **Goal:** Build the v2 AI Incubator MVP: a dual-track chat and mindmap workspace with a general AI thinking loop, structured map updates, and user-confirmed restructure suggestions.
 
 **Architecture:** Add v2 backend tables and `/api/v2` endpoints alongside the existing MVP, then add a new React workspace that consumes a neutral `ThinkingMap` model. The first vertical slice uses deterministic/mock AI orchestration so the UI and data flow can be verified before real model calls are connected.

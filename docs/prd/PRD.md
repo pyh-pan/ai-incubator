@@ -1,703 +1,129 @@
-# AI Incubator 产品需求文档 (PRD)
+# AI Incubator Product Requirements
 
-## 文档信息
+Last updated: 2026-04-26
 
-| 项目 | 内容 |
-|------|------|
-| 产品名称 | AI Incubator（想法孵化器） |
-| 文档版本 | v1.0 |
-| 创建日期 | 2026-02-13 |
-| 文档状态 | 草案 |
-| 产品负责人 | - |
-| 技术负责人 | - |
+## 1. Product Direction
 
----
+AI Incubator helps users turn vague ideas into clearer, more actionable concepts. It should make the user's thinking visible through questions, conversation, and a thinking map. It should not replace the user's judgment with generated conclusions.
 
-## 目录
+The current product uses one fixed general thinking approach. It must not expose multiple framework choices, custom framework editing, or settings-heavy prompt workflows unless that direction is explicitly reopened.
 
-1. [产品概述](#1-产品概述)
-2. [目标用户定义](#2-目标用户定义)
-3. [核心功能需求](#3-核心功能需求)
-4. [交互设计规范](#4-交互设计规范)
-5. [技术实现要点](#5-技术实现要点)
-6. [数据模型设计](#6-数据模型设计)
-7. [里程碑规划](#7-里程碑规划)
-8. [成功指标](#8-成功指标)
+## 2. Target Users
 
----
+- Founders and product builders refining early product ideas.
+- Researchers shaping questions, assumptions, and validation paths.
+- Creators developing concepts, stories, or projects.
+- Students structuring topics and next steps.
+- Independent learners planning personal goals.
 
-## 1. 产品概述
+## 3. Core User Journey
 
-### 1.1 产品定位
+1. User registers or logs in.
+2. User creates a project with a title and optional background.
+3. App opens the incubation workspace.
+4. AI asks one focused question at a time.
+5. User answers through chat or around a selected node.
+6. The thinking map updates with concise nodes.
+7. High-risk map restructuring is shown as a suggestion and requires user confirmation.
 
-**AI Incubator** 是一个 AI 驱动的想法完善工具，通过**提问刺激用户思考**，以**思维导图作为可视化工具**，帮助用户逐步完善模糊的想法。
+## 4. Current Feature Requirements
 
-### 1.2 核心价值主张
+### Project Creation
 
-- **不代替用户思考，而是让用户看到自己的思考**
-- **提供思考的"脚手架"** - 帮助用户从模糊到清晰
-- **外部化是核心** - 通过思维导图让思考过程可视化
-- **完全跟随用户的思考方向** - 动态适应，非静态框架
+- Required: idea title.
+- Optional: background information such as target users, constraints, current assumptions, or open questions.
+- Do not ask the user to choose a thinking framework.
+- After creation, navigate directly to `/projects/:projectId`.
 
-### 1.3 产品愿景
+### Workspace
 
-成为每个创新者、创作者、创业者的"思考伙伴"，帮助他们将模糊的想法孵化成可执行的概念。
+The workspace is the primary product surface and contains:
 
----
+- `ChatPanel` for conversation and node-scoped turns.
+- `MindmapCanvas` for visualizing thinking nodes with MindElixir.
+- `NodeInspector` for full node details, including questions and summaries.
+- `RestructureSuggestionPanel` for accepting or rejecting pending structural changes.
 
-## 2. 目标用户定义
+The map should show concise titles. Full questions, summaries, and answer context belong in the inspector or chat.
 
-### 2.1 用户画像
+### AI Behavior
 
-#### 核心用户特征
+- Ask one main question per turn.
+- Use internal thinking modes: `diverge`, `converge`, `clarify`, `challenge`, and `validate`.
+- Do not show fixed framework names to users.
+- Separate facts, assumptions, insights, questions, decisions, risks, and next steps when possible.
+- Reject or replace low-value generic questions such as "还有什么需要补充？".
+- Avoid duplicate follow-up questions.
+- Use deterministic fallback output when the provider is not configured, returns invalid JSON, or returns low-quality output.
 
-| 维度 | 描述 |
-|------|------|
-| **状态** | 有了一个新的想法/话题，但在完善过程中遇到困难 |
-| **痛点** | "深度卡住" - 有模糊方向，但不知道如何深入思考 |
-| **典型角色** | 产品经理、创业者、研究人员、创作者、学生 |
+### Map Updates
 
-#### 用户细分
+- Low-risk node creation can be applied directly.
+- High-risk operations such as moving, renaming, merging, splitting, or deleting nodes require explicit user confirmation through restructure suggestions.
+- Map renderer state is not the source of truth; backend `ThinkingNode` records are.
 
-1. **产品经理/创业者** - 孵化产品/商业想法
-2. **研究人员** - 完善研究课题和方法论
-3. **创作者** - 发展小说、画作等创意概念
-4. **学生** - 学术论文、毕业设计的选题与框架
-5. **终身学习者** - 个人规划、技能学习路径设计
+### Authentication and Ownership
 
-### 2.2 用户痛点分析
+- Missing or invalid credentials return `401`.
+- Users can only access their own projects and v2 workspaces.
+- Register and login return both an access token and user payload.
 
-#### 痛点一：思考路径不明确
-- **表现**：起点容易，深入难
-- **影响**：想法停留在表面，无法深化
-- **解决方案**：AI 动态生成问题，引导向前一步
+## 5. Technical Requirements
 
-#### 痛点二：思维盲区太多
-- **表现**：自己看不到的维度和角度
-- **影响**：想法不完整，执行时遇到意外问题
-- **解决方案**：多视角提问 + 盲区检测提示
+### Backend
 
-#### 痛点三：缺乏外部化思考工具
-- **表现**：想法只在脑海中，难以审视和调整
-- **影响**：无法看到自己的思维演化轨迹
-- **解决方案**：思维导图可视化 + 保留演化历史
+- FastAPI API server.
+- SQLAlchemy models and Alembic migrations.
+- PostgreSQL for normal development and SQLite for tests.
+- JWT auth.
+- OpenAI-compatible client for OpenAI and GLM.
+- Pydantic schema validation for AI output.
 
----
+Current v2 tables:
 
-## 3. 核心功能需求
+- `conversation_messages_v2`
+- `thinking_nodes`
+- `restructure_suggestions`
+- `incubator_runs`
 
-### 功能模块一：初始化与通用探索
+Legacy compatibility tables can remain while old endpoints exist:
 
-#### 功能描述
-用户输入初始想法和可选背景信息后，系统进入固定的通用探索流程。AI 不向用户暴露多个思维框架，而是在内部结合发散、收敛、澄清、挑战和验证等模式持续提问。
+- `mindmap_nodes`
+- `conversation_history`
+- `evolution_history`
 
-#### 详细需求
+### Frontend
 
-| 功能点 | 描述 | 优先级 |
-|--------|------|--------|
-| 想法输入 | 简洁的文本输入框，支持多行输入 | P0 |
-| 背景补充 | 用户可补充目标用户、约束条件、已有资源或当前困惑 | P0 |
-| 通用探索 | 使用固定通用框架，不提供用户可选框架 | P0 |
-| 工作区进入 | 创建项目后直接进入孵化工作区 | P0 |
-| 导图生成 | 基于用户输入和后续回答动态生成思维导图结构 | P0 |
+- React + TypeScript + Vite.
+- React Router authenticated routes.
+- TanStack Query for server state.
+- Zustand for auth state.
+- MindElixir for map rendering.
+- Ant Design and TailwindCSS for UI.
 
----
+## 6. Testing Requirements
 
-### 功能模块二：思维导图可视化
+- Backend tests cover auth, ownership, v2 schemas, map operation validation, thinking mode selection, AI fallback behavior, and v2 API responses.
+- Frontend tests cover stores and map data adapters.
+- Full verification before shipping:
 
-#### 功能描述
-以思维导图形式展示用户的想法结构，支持分支状态标识和自动延伸。
-
-#### 详细需求
-
-| 功能点 | 描述 | 优先级 |
-|--------|------|--------|
-| 中心节点 | 显示用户的核心想法 | P0 |
-| 分支展示 | 基于用户输入和 AI 追问动态展示主要分支 | P0 |
-| 状态标识 | 未回答/已回答/进行中的视觉区分 | P0 |
-| 分支延伸 | 用户回答后自动生成下一级子问题 | P0 |
-| 演化历史 | 保留完整的思维演化轨迹 | P1 |
-
-#### 状态系统设计
-
-```
-未回答（灰色/虚线）
-  ↓ 用户点击回答
-进行中（蓝色/高亮）
-  ↓ 用户提交回答
-已回答（绿色/实线 + ✓）
+```bash
+cd backend
+DATABASE_URL=sqlite:///./baseline_test.db .venv/bin/python -m pytest -q -o addopts=''
 ```
 
----
-
-### 功能模块三：悬停探索交互
-
-#### 功能描述
-鼠标悬停在分支上时，弹出问题详情卡片，非侵入式地展示背景信息和案例。
-
-#### 详细需求
-
-| 功能点 | 描述 | 优先级 |
-|--------|------|--------|
-| 悬停触发 | 鼠标悬停在分支上显示卡片 | P0 |
-| 卡片内容 | 问题 + 背景信息 + 案例 | P0 |
-| 自动消失 | 鼠标移开后卡片消失 | P0 |
-| 定位算法 | 智能计算卡片位置，避免遮挡 | P1 |
-
-#### 卡片内容结构
-
-```
-┌─────────────────────────────────────────┐
-│ 【AI 问题详情】                          │
-│                                         │
-│ 问题：谁是你的目标用户？                 │
-│                                         │
-│ 背景信息：                              │
-│ - 市面上的日记工具用户群体主要有三类：  │
-│   · 习惯记录者（每天写）                │
-│   · 偶尔记录者（一周几次）              │
-│   · 尝试记录者（想开始但坚持不下来）      │
-│                                         │
-│ - 了解目标用户有助于后续功能设计        │
-│                                         │
-│ - 相关案例：Day One、Reflect 的用户画像  │
-└─────────────────────────────────────────┘
+```bash
+cd frontend
+npm run lint
+npm test -- --run
+npm run build
 ```
 
----
-
-### 功能模块四：点击固定与回答
-
-#### 功能描述
-点击分支后卡片固定在屏幕，用户可以在输入框中回答问题，AI 自动提炼核心观点。
-
-#### 详细需求
-
-| 功能点 | 描述 | 优先级 |
-|--------|------|--------|
-| 点击固定 | 点击分支后卡片固定在屏幕 | P0 |
-| 输入框 | 提供文本输入区域 | P0 |
-| 提交确认 | 支持 Enter 键或按钮提交 | P0 |
-| AI 提炼 | 自动提取用户回答的核心观点 | P0 |
-| 观点结构化 | 以要点列表形式组织提炼结果 | P0 |
-| 延伸触发 | 提交后自动生成下一级问题 | P0 |
-
-#### AI 提炼示例
-
-**用户输入**:
-```
-我的目标是"尝试记录者"，因为现有工具太复杂，
-不适合刚想开始写日记的人。
-```
-
-**AI 自动提炼**:
-- 目标用户：尝试记录者
-- 市场空白：现有工具复杂，不适合新手
-- 定位：简单易用的日记工具
-
-#### 分支延伸逻辑
-
-```
-目标用户（✓）
-  ├─ 具体画像：尝试记录者是什么样的？
-  ├─ 使用场景：他们会在什么情况下写日记？
-  └─ 痛点：现有工具为什么不适合他们？
-```
-
----
-
-### 功能模块五：分支自由切换
-
-#### 功能描述
-用户可以随时切换到其他分支进行探索，支持非线性思考和回溯历史。
-
-#### 详细需求
-
-| 功能点 | 描述 | 优先级 |
-|--------|------|--------|
-| 非线性探索 | 无需按固定顺序回答问题 | P0 |
-| 分支切换 | 点击其他未回答分支即可切换 | P0 |
-| 历史回溯 | 可以重新点击已回答分支查看/修改 | P0 |
-| 结构重组 | 修改后分支会根据新回答重新生成 | P1 |
-| 演化轨迹 | 保留用户在每个分支的思考历史 | P1 |
-
----
-
-### 功能模块六：AI 智能问答
-
-#### 功能描述
-基于用户选择的框架和上下文，AI 动态生成问题、提供背景信息、提炼用户回答。
-
-#### 详细需求
-
-| 功能点 | 描述 | 优先级 |
-|--------|------|--------|
-| 问题生成 | 基于框架模板和上下文生成问题 | P0 |
-| 追问生成 | 根据用户回答生成下一层问题 | P0 |
-| 背景信息 | 为每个问题提供背景知识、案例 | P0 |
-| 回答提炼 | 提取用户回答的核心观点 | P0 |
-| 盲区检测 | 基于上下文推断可能的遗漏维度 | P1 |
-| 信息密度控制 | 根据用户偏好控制信息展示量 | P2 |
-
-#### AI 能力要求
-
-**1. 问题生成能力**
-- 基于框架模板库生成一级问题
-- 根据用户回答动态生成追问
-- 问题应该"向前推进"，让想法更清晰
-
-**2. 上下文感知能力**
-- 记住用户之前说了什么
-- 追踪想法的演化路径
-- 检测用户是否换了方向并立即跟随
-
-**3. 信息提供能力**
-- 为每个问题提供背景信息
-- 提供相关案例、理论、竞品信息
-- 控制信息密度，避免过载
-
----
-
-## 4. 交互设计规范
-
-### 4.1 初始化流程设计
-
-```
-┌─────────────────────────────────────┐
-│ 步骤1：用户输入想法                  │
-│ ┌───────────────────────────────┐   │
-│ │ 在这里输入你的想法...          │   │
-│ │                               │   │
-│ │           [继续 →]             │   │
-│ └───────────────────────────────┘   │
-└─────────────────────────────────────┘
-              ↓
-┌─────────────────────────────────────┐
-│ 步骤2：进入通用探索                    │
-│                                         │
-│ 正在为你创建孵化工作区...              │
-│                                         │
-│ ████████████░░░░ 80%                  │
-└─────────────────────────────────────┘
-```
-
-### 4.2 思维导图界面布局
-
-```
-┌──────────────────────────────────────────────────────┐
-│  AI Incubator                              [用户头像] │
-├──────────────────────────────────────────────────────┤
-│                                                       │
-│                      ┌──────────────┐                │
-│                      │ AI 写日记工具 │                │
-│                      └──────┬───────┘                │
-│                             │                         │
-│           ┌─────────────────┼─────────────────┐       │
-│           │                 │                 │       │
-│      ┌────▼─────┐     ┌────▼─────┐     ┌────▼─────┐│
-│      │目标用户  │     │核心价值  │     │痛点问题  ││
-│      │   (?)    │     │   (✓)    │     │   (...)  ││
-│      └──────────┘     └──────────┘     └──────────┘│
-│                                                       │
-│      ┌──────────────────────────────────────────┐    │
-│      │ [悬停卡片示例 - 非固定状态]                 │    │
-│      │                                           │    │
-│      │ 问题：谁是你的目标用户？                    │    │
-│      │                                           │    │
-│      │ 背景信息：日记工具用户群体...              │    │
-│      │                                           │    │
-│      │ 相关案例：Day One、Reflect                │    │
-│      └──────────────────────────────────────────┘    │
-│                                                       │
-└──────────────────────────────────────────────────────┘
-```
-
-### 4.3 悬停卡片交互规范
-
-| 交互 | 响应 | 说明 |
-|------|------|------|
-| 鼠标悬停分支 | 300ms 延迟后显示卡片 | 避免误触 |
-| 鼠标移开分支 | 立即隐藏卡片 | 非侵入式 |
-| 鼠标移入卡片 | 保持卡片显示 | 防止闪烁 |
-| 点击分支 | 卡片固定在屏幕 | 进入交互模式 |
-
-### 4.4 分支状态视觉反馈
-
-| 状态 | 颜色 | 图标 | 样式 |
-|------|------|------|------|
-| 未回答 | 灰色 | ? | 虚线边框 |
-| 进行中 | 蓝色 | ... | 高亮边框 |
-| 已回答 | 绿色 | ✓ | 实线边框 |
-
-### 4.5 响应式设计要求
-
-| 设备类型 | 断点 | 布局调整 |
-|----------|------|----------|
-| 桌面端 | > 1024px | 完整思维导图 + 侧边栏 |
-| 平板端 | 768px - 1024px | 思维导图 + 可折叠侧边栏 |
-| 移动端 | < 768px | 竖版布局，思维导图简化 |
-
----
-
-## 5. 技术实现要点
-
-### 5.1 前端技术栈建议
-
-#### 前端技术选型
-| 选项 | 优势 | 劣势 |
-|------|------|------|
-| **React** | 生态丰富、组件化程度高 | 学习曲线 |
-| **Vue** | 上手快、文档友好 | 企业级应用生态稍弱 |
-
-**建议**: React（团队熟悉度 + 生态成熟度）
-
-#### 思维导图库
-| 选项 | 优势 | 劣势 |
-|------|------|------|
-| **React Flow** | React 原生、可定制性强 | 学习成本 |
-| **D3.js** | 功能强大、灵活性高 | 复杂度高 |
-| **AntV G6** | 中文文档、开箱即用 | 定制化限制 |
-
-**建议**: React Flow（与框架一致 + 可定制性）
-
-#### UI 组件库
-| 选项 | 优势 | 劣势 |
-|------|------|------|
-| **Ant Design** | 中文友好、组件全面 | 定制化复杂 |
-| **Material-UI** | 设计规范成熟 | 中文支持一般 |
-
-**建议**: Ant Design（符合国内用户习惯）
-
----
-
-### 5.2 后端技术栈建议
-
-#### 后端技术选型
-| 选项 | 优势 | 劣势 |
-|------|------|------|
-| **NestJS (Node)** | TypeScript、结构化、可扩展 | 性能相对较低 |
-| **FastAPI (Python)** | AI 集成便捷、高性能 | 异步处理复杂 |
-| **Django (Python)** | 全栈框架、ORM 完善 | 重量级 |
-
-**建议**: FastAPI（AI 集成便利 + 性能优势）
-
-#### AI 集成
-| 选项 | 优势 | 劣势 |
-|------|------|------|
-| **OpenAI API** | 模型能力强、生态成熟 | 成本较高 |
-| **Claude API** | 上下文窗口大、推理能力强 | 生态较新 |
-| **本地模型** | 成本可控、数据隐私 | 效果较弱 |
-
-**建议**: OpenAI API（GPT-4）为主，Claude API 备用
-
-#### 数据库选择
-| 选项 | 优势 | 劣势 |
-|------|------|------|
-| **PostgreSQL** | 关系型、JSON 支持 | 复杂查询性能 |
-| **MongoDB** | 文档型、灵活扩展 | 事务支持弱 |
-
-**建议**: PostgreSQL（数据结构化程度高，用户关系需要事务支持）
-
----
-
-### 5.3 核心 AI 能力
-
-#### 1. 框架模板库
-```json
-{
-  "product_manager": {
-    "name": "产品经理框架",
-    "branches": [
-      {
-        "id": "target_users",
-        "label": "目标用户",
-        "question": "谁是你的目标用户？",
-        "context": "市场上的产品用户群体主要有...",
-        "examples": ["Day One 的用户画像", "Reflect 的用户画像"]
-      },
-      // ... 其他分支
-    ]
-  }
-  // ... 其他框架
-}
-```
-
-#### 2. 问题生成引擎
-```python
-def generate_followup_question(user_answer: str, branch_context: dict) -> str:
-    """
-    基于用户回答生成分支延伸的追问
-
-    Args:
-        user_answer: 用户的回答
-        branch_context: 当前分支的上下文信息
-
-    Returns:
-        生成的追问
-    """
-    prompt = f"""
-    基于用户的回答，生成一个追问，帮助用户深入思考。
-
-    当前分支：{branch_context['label']}
-    用户回答：{user_answer}
-
-    请生成一个"向前一步"的追问，让想法更清晰。
-    """
-    return llm.generate(prompt)
-```
-
-#### 3. 回答提炼算法
-```python
-def extract_key_points(user_answer: str) -> List[str]:
-    """
-    提取用户回答的核心观点
-
-    Args:
-        user_answer: 用户的原始回答
-
-    Returns:
-        提炼后的要点列表
-    """
-    prompt = f"""
-    提取以下回答的核心观点，以要点列表形式组织。
-
-    用户回答：{user_answer}
-
-    要求：
-    - 最多 3-5 个要点
-    - 每个要点不超过 15 字
-    - 保留核心信息，去除冗余
-    """
-    return llm.generate(prompt)
-```
-
-#### 4. 追问生成逻辑
-```python
-def should_continue_branching(branch_depth: int, user_answer_quality: float) -> bool:
-    """
-    判断是否应该继续延伸分支
-
-    Args:
-        branch_depth: 当前分支深度
-        user_answer_quality: 用户回答的质量评分 (0-1)
-
-    Returns:
-        是否继续分支
-    """
-    MAX_DEPTH = 5
-    MIN_QUALITY = 0.3
-
-    if branch_depth >= MAX_DEPTH:
-        return False
-    if user_answer_quality < MIN_QUALITY:
-        return False
-    return True
-```
-
----
-
-## 6. 数据模型设计
-
-### 6.1 用户表 (users)
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | UUID | 用户唯一标识 |
-| email | VARCHAR | 邮箱（登录用） |
-| username | VARCHAR | 用户名 |
-| created_at | TIMESTAMP | 创建时间 |
-| updated_at | TIMESTAMP | 更新时间 |
-
-### 6.2 项目表 (projects)
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | UUID | 项目唯一标识 |
-| user_id | UUID | 所属用户 |
-| title | VARCHAR | 项目标题（核心想法） |
-| framework | VARCHAR | 选择的框架 |
-| status | VARCHAR | 状态（active/archived） |
-| created_at | TIMESTAMP | 创建时间 |
-| updated_at | TIMESTAMP | 更新时间 |
-
-### 6.3 思维导图节点表 (mindmap_nodes)
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | UUID | 节点唯一标识 |
-| project_id | UUID | 所属项目 |
-| parent_id | UUID | 父节点ID（NULL表示根节点） |
-| label | VARCHAR | 节点标签 |
-| question | TEXT | AI 问题 |
-| context | TEXT | 背景信息 |
-| answer | TEXT | 用户回答 |
-| extracted_points | JSON | 提炼的要点 |
-| status | VARCHAR | 状态（unanswered/in_progress/answered） |
-| depth | INTEGER | 节点深度 |
-| position | JSON | 在导图中的位置坐标 |
-| created_at | TIMESTAMP | 创建时间 |
-| updated_at | TIMESTAMP | 更新时间 |
-
-### 6.4 对话历史表 (conversation_history)
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | UUID | 记录唯一标识 |
-| project_id | UUID | 所属项目 |
-| node_id | UUID | 关联节点 |
-| role | VARCHAR | 角色（user/assistant） |
-| content | TEXT | 对话内容 |
-| metadata | JSON | 元数据（如AI模型版本） |
-| created_at | TIMESTAMP | 创建时间 |
-
-### 6.5 演化历史表 (evolution_history)
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | UUID | 记录唯一标识 |
-| node_id | UUID | 关联节点 |
-| old_answer | TEXT | 旧回答 |
-| new_answer | TEXT | 新回答 |
-| change_summary | TEXT | 变化摘要 |
-| created_at | TIMESTAMP | 创建时间 |
-
----
-
-## 7. 里程碑规划
-
-### MVP 阶段（4-6 周）
-
-#### Phase 1: 通用探索 + 基础思维导图展示（Week 1-2）
-**目标**: 用户输入想法后直接进入通用探索工作区，并看到基础思维导图
-
-**功能清单**:
-- [ ] 用户输入初始想法
-- [ ] 用户补充可选背景信息
-- [ ] 固定通用探索流程
-- [ ] 基础思维导图渲染（静态）
-- [ ] 分支状态标识（未回答）
-- [ ] 根节点展示
-
-**交付物**:
-- 可运行的前端原型
-- 基础的后端 API（项目创建、导图生成）
-
-#### Phase 2: 悬停探索 + 点击回答（Week 2-3）
-**目标**: 用户可以查看问题详情并提交回答
-
-**功能清单**:
-- [ ] 悬停卡片显示（问题+背景）
-- [ ] 点击固定卡片
-- [ ] 输入框交互
-- [ ] 提交回答
-- [ ] 状态更新（进行中 → 已回答）
-- [ ] AI 提炼核心观点
-- [ ] 卡片定位算法
-
-**交付物**:
-- 完整的交互流程
-- AI 提炼功能集成
-
-#### Phase 3: 分支延伸 + 自由切换（Week 3-4）
-**目标**: 用户可以探索多个分支并看到思维导图动态演化
-
-**功能清单**:
-- [ ] 分支自动延伸
-- [ ] 追问生成
-- [ ] 非线性分支切换
-- [ ] 历史回溯
-- [ ] 导图动态更新
-- [ ] 演化历史记录
-
-**交付物**:
-- 完整的思维导图交互系统
-- AI 追问能力
-
-#### Phase 4: AI 问答集成（Week 4-6）
-**目标**: 完整的 AI 智能问答能力
-
-**功能清单**:
-- [ ] 背景信息生成
-- [ ] 案例库集成
-- [ ] 盲区检测
-- [ ] 信息密度控制
-- [ ] 上下文感知优化
-- [ ] 响应速度优化
-
-**交付物**:
-- 完整的 AI 能力集成
-- MVP 版本上线
-
----
-
-### 后续版本规划
-
-#### V1.1: 协作功能（MVP 后 2-3 月）
-- 多人实时协作
-- 评论和讨论
-- 版本对比
-
-#### V1.2: 导出功能（MVP 后 1 月）
-- 导出为 PDF、图片
-- 生成结构化报告
-- 分享链接
-
-#### V2.0: 智能推荐（MVP 后 3-4 月）
-- AI 隐式识别用户意图
-- 动态生成框架
-- 学习用户偏好
-
----
-
-## 8. 成功指标
-
-### 8.1 用户指标
-
-| 指标 | 目标值 | 说明 |
-|------|--------|------|
-| 用户留存率（次日） | > 40% | 用户次日回访比例 |
-| 用户留存率（7日） | > 20% | 用户7日回访比例 |
-| 会话完成度 | > 60% | 完成至少3个分支的比例 |
-| 分支平均深度 | > 3 层 | 用户探索的平均深度 |
-
-### 8.2 产品指标
-
-| 指标 | 目标值 | 说明 |
-|------|--------|------|
-| AI 回答满意度 | > 3.5/5 | 用户对提炼质量的评分 |
-| 问题有用度 | > 3.5/5 | 用户对AI问题的评分 |
-| 思维导图完成度 | > 70% | 分支完成比例 |
-
-### 8.3 技术指标
-
-| 指标 | 目标值 | 说明 |
-|------|--------|------|
-| AI 响应时间 | < 3s | 问题/追问生成时间 |
-| 页面加载时间 | < 2s | 首屏加载时间 |
-| 可用性 | > 99.5% | 服务可用比例 |
-
----
-
-## 附录
-
-### A. 竞品分析
-
-| 产品 | 相似点 | 差异点 |
-|------|--------|--------|
-| **Notion AI** | AI 辅助写作 | 缺乏结构化思考框架 |
-| **XMind** | 思维导图工具 | 无 AI 驱动 |
-| **ChatGPT** | AI 对话能力 | 无可视化思维导图 |
-| **Miro** | 协作白板 | AI 能力较弱 |
-
-### B. 参考文档
-
-- 原始想法孵化器文档：`/home/pan/想法集/想法孵化器.md`
-- 认知科学理论基础：
-  - Graham Wallas 创造性过程四阶段模型
-  - Double Diamond 设计思维模型
-  - 扩展心智与分布式认知理论
-  - Knowledge Building 与渐进问题解决
-
----
-
-**文档结束**
+## 7. Deferred Scope
+
+- User-visible framework selection.
+- Custom framework prompt editing.
+- Runtime provider/API-key settings UI.
+- Collaboration and sharing.
+- Export to PDF, image, or structured reports.
+- Large Playwright suite beyond critical user journeys.
