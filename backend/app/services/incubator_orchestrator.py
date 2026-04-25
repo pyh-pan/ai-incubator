@@ -3,10 +3,9 @@ import json
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.core.config import settings
 from app.models import ConversationMessageV2, IncubatorRun, Project, ThinkingNode
 from app.schemas.v2 import AIMapUpdate, AIOrchestratorOutput, CurrentSummary, MapOperation, TurnRequest
-from app.services.ai_service import get_client
+from app.services.ai_service import get_ai_client, get_model
 from app.services.map_update_service import validate_operation_risk
 from app.services.thinking_mode_service import ThinkingStateSignals, recommend_thinking_mode
 
@@ -190,11 +189,12 @@ def build_ai_context(
 
 
 def call_ai_orchestrator(content: str, mode: str, context: dict | None = None) -> AIOrchestratorOutput:
-    if not settings.OPENAI_API_KEY:
+    client = get_ai_client()
+    if client is None:
         return mock_ai_response(content, mode)
 
-    response = get_client().chat.completions.create(
-        model=settings.OPENAI_MODEL,
+    response = client.chat.completions.create(
+        model=get_model(),
         messages=[
             {"role": "system", "content": SYSTEM_CONTEXT_V2},
             {
@@ -276,12 +276,13 @@ def run_turn(
     project.thinking_stage = ai_output.stage
     project.summary_snapshot = ai_output.current_summary.model_dump(mode="json")
 
+    configured_client = get_ai_client()
     db.add(
         IncubatorRun(
             project_id=project.id,
             user_message_id=user_message.id,
             assistant_message_id=assistant_message.id,
-            model=settings.OPENAI_MODEL if settings.OPENAI_API_KEY else "mock-v2",
+            model=get_model() if configured_client else "mock-v2",
             input_payload={
                 "content": request.content,
                 "source": request.source,
