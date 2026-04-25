@@ -7,6 +7,7 @@ from app.models import ConversationMessageV2, IncubatorRun, Project, ThinkingNod
 from app.schemas.v2 import AIMapUpdate, AIOrchestratorOutput, CurrentSummary, MapOperation, TurnRequest
 from app.services.ai_service import get_ai_client, get_model
 from app.services.map_update_service import validate_operation_risk
+from app.services.question_strategy import build_fallback_turn, has_duplicate_questions, is_generic_question
 from app.services.thinking_mode_service import ThinkingStateSignals, recommend_thinking_mode
 
 
@@ -123,30 +124,29 @@ def build_signals(db: Session, project_id) -> ThinkingStateSignals:
 
 def mock_ai_response(content: str, mode, context: dict | None = None) -> AIOrchestratorOutput:
     trimmed_content = content.strip()
-    question = "Who is the first specific user who would need this badly enough to try an early version?"
-    if "?" in trimmed_content:
-        question = "What evidence would make the answer to that question clearer?"
+    fallback = build_fallback_turn(trimmed_content, mode, context)
+    question = fallback["question"]
 
     operation = MapOperation(
         type="create_node",
-        title="Target user",
-        kind="question",
+        title=fallback["title"],
+        kind=fallback["kind"],
         status="open",
         question=question,
-        summary="Clarify the initial audience and urgency.",
+        summary=fallback["summary"],
     )
     risk = validate_operation_risk(operation)
 
     return AIOrchestratorOutput(
         thinking_mode=mode,
         stage="discover",
-        mode_reason=f"Mock orchestration selected {mode} for the current workspace state.",
+        mode_reason=f"Fallback orchestration selected {mode} for the current workspace state.",
         assistant_message=(
-            "Let's anchor this idea in one concrete user and the problem they already feel. "
+            "Let's keep this concrete and avoid adding structure before the next uncertainty is clear. "
             f"{question}"
         ),
         next_question=question,
-        question_intent="Identify a narrow initial user and concrete demand signal.",
+        question_intent=fallback["intent"],
         map_updates=[AIMapUpdate(operation=operation, risk=risk)],
         detected_gaps=["Initial target user is not yet specific enough."],
         current_summary=CurrentSummary(
@@ -188,25 +188,49 @@ def build_ai_context(
     }
 
 
+def _is_low_value_ai_output(output: AIOrchestratorOutput) -> bool:
+    if is_generic_question(output.next_question):
+        return True
+
+    map_questions: list[str] = []
+    for update in output.map_updates:
+        question = update.operation.question
+        if question and is_generic_question(question):
+            return True
+        if question:
+            map_questions.append(question)
+
+    if has_duplicate_questions(map_questions):
+        return True
+
+    return False
+
+
 def call_ai_orchestrator(content: str, mode: str, context: dict | None = None) -> AIOrchestratorOutput:
     client = get_ai_client()
     if client is None:
-        return mock_ai_response(content, mode)
+        return mock_ai_response(content, mode, context)
 
-    response = client.chat.completions.create(
-        model=get_model(),
-        messages=[
-            {"role": "system", "content": SYSTEM_CONTEXT_V2},
-            {
-                "role": "user",
-                "content": json.dumps(context or {"content": content, "recommended_mode": mode}, ensure_ascii=False),
-            },
-        ],
-        temperature=0.4,
-        response_format={"type": "json_object"},
-    )
-    response_content = response.choices[0].message.content or "{}"
-    return AIOrchestratorOutput.model_validate_json(response_content)
+    try:
+        response = client.chat.completions.create(
+            model=get_model(),
+            messages=[
+                {"role": "system", "content": SYSTEM_CONTEXT_V2},
+                {
+                    "role": "user",
+                    "content": json.dumps(context or {"content": content, "recommended_mode": mode}, ensure_ascii=False),
+                },
+            ],
+            temperature=0.4,
+            response_format={"type": "json_object"},
+        )
+        response_content = response.choices[0].message.content or "{}"
+        output = AIOrchestratorOutput.model_validate_json(response_content)
+        if _is_low_value_ai_output(output):
+            return mock_ai_response(content, mode, context)
+        return output
+    except Exception:
+        return mock_ai_response(content, mode, context)
 
 
 def run_turn(
