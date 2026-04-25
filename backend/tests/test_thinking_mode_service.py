@@ -1,4 +1,7 @@
+from typing import get_args
+
 from app.services.thinking_mode_service import ThinkingStateSignals, recommend_thinking_mode
+from app.services.thinking_mode_service import ThinkingModeRecommendation
 
 
 def test_sparse_initial_state_recommends_diverge():
@@ -20,3 +23,13 @@ def test_user_requested_action_plan_recommends_converge():
     result = recommend_thinking_mode(signals)
     assert result.mode == "converge"
     assert "action" in result.reason.lower()
+
+
+def test_recommendation_mode_is_typed_as_supported_modes():
+    assert set(get_args(ThinkingModeRecommendation.__annotations__["mode"])) == {
+        "diverge",
+        "converge",
+        "clarify",
+        "challenge",
+        "validate",
+    }

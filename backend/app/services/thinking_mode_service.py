@@ -1,4 +1,8 @@
 from dataclasses import dataclass
+from typing import Literal
+
+
+ThinkingMode = Literal["diverge", "converge", "clarify", "challenge", "validate"]
 
 
 @dataclass
@@ -19,7 +23,7 @@ class ThinkingStateSignals:
 
 @dataclass
 class ThinkingModeRecommendation:
-    mode: str
+    mode: ThinkingMode
     reason: str
 
 

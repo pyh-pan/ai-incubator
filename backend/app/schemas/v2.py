@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Any, Literal
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -14,9 +15,9 @@ OperationType = Literal["create_node", "update_node", "mark_answered", "move_nod
 
 
 class ThinkingNodeResponse(BaseModel):
-    id: str
-    project_id: str
-    parent_id: str | None
+    id: UUID
+    project_id: UUID
+    parent_id: UUID | None
     kind: NodeKind
     status: NodeStatus
     title: str
@@ -34,9 +35,9 @@ class ThinkingNodeResponse(BaseModel):
 
 
 class ConversationMessageResponse(BaseModel):
-    id: str
-    project_id: str
-    node_id: str | None
+    id: UUID
+    project_id: UUID
+    node_id: UUID | None
     role: MessageRole
     source: str
     content: str
@@ -61,12 +62,12 @@ class MapOperation(BaseModel):
 
 
 class RestructureSuggestionResponse(BaseModel):
-    id: str
-    project_id: str
+    id: UUID
+    project_id: UUID
     status: str
     operations: list[MapOperation]
     rationale: str
-    created_from_message_id: str | None
+    created_from_message_id: UUID | None
     created_at: datetime
     resolved_at: datetime | None
 
