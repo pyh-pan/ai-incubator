@@ -1,4 +1,3 @@
-from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -6,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import get_current_user_id
+from app.core.time import utc_now
 from app.models import ConversationMessageV2, Project, RestructureSuggestion, ThinkingNode
 from app.schemas.v2 import TurnRequest, TurnResponse, WorkspaceResponse
 from app.services.incubator_orchestrator import ensure_root_node, run_turn
@@ -99,7 +99,7 @@ def reject_suggestion(
 
     project = get_project_or_404(db, suggestion.project_id, user_id)
     suggestion.status = "rejected"
-    suggestion.resolved_at = datetime.utcnow()
+    suggestion.resolved_at = utc_now()
     db.commit()
     return build_workspace(db, project)
 
@@ -121,6 +121,6 @@ def accept_suggestion(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     suggestion.status = "accepted"
-    suggestion.resolved_at = datetime.utcnow()
+    suggestion.resolved_at = utc_now()
     db.commit()
     return build_workspace(db, project)

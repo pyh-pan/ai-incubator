@@ -1,4 +1,3 @@
-from datetime import datetime
 import uuid
 
 from sqlalchemy import Column, DateTime, Enum as SQLEnum, ForeignKey, Integer, JSON, String, Text
@@ -6,12 +5,9 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
+from app.core.time import utc_now
 
 JSONBType = JSON().with_variant(JSONB, "postgresql")
-
-
-def utcnow() -> datetime:
-    return datetime.utcnow()
 
 
 class ConversationMessageV2(Base):
@@ -26,7 +22,7 @@ class ConversationMessageV2(Base):
     thinking_mode = Column(String, nullable=True)
     stage = Column(String, nullable=True)
     message_metadata = Column(JSONBType, nullable=True)
-    created_at = Column(DateTime, nullable=False, default=utcnow)
+    created_at = Column(DateTime, nullable=False, default=utc_now)
 
     project = relationship("Project")
 
@@ -47,8 +43,8 @@ class ThinkingNode(Base):
     layout = Column(JSONBType, nullable=True)
     source_message_ids = Column(JSONBType, nullable=False, default=list)
     confidence = Column(Integer, nullable=False, default=100)
-    created_at = Column(DateTime, nullable=False, default=utcnow)
-    updated_at = Column(DateTime, nullable=False, default=utcnow, onupdate=utcnow)
+    created_at = Column(DateTime, nullable=False, default=utc_now)
+    updated_at = Column(DateTime, nullable=False, default=utc_now, onupdate=utc_now)
 
     project = relationship("Project")
     parent = relationship("ThinkingNode", remote_side=[id], backref="children")
@@ -63,7 +59,7 @@ class RestructureSuggestion(Base):
     operations = Column(JSONBType, nullable=False)
     rationale = Column(Text, nullable=False)
     created_from_message_id = Column(UUID(as_uuid=True), ForeignKey("conversation_messages_v2.id"), nullable=True)
-    created_at = Column(DateTime, nullable=False, default=utcnow)
+    created_at = Column(DateTime, nullable=False, default=utc_now)
     resolved_at = Column(DateTime, nullable=True)
 
     project = relationship("Project")
@@ -81,4 +77,4 @@ class IncubatorRun(Base):
     output_payload = Column(JSONBType, nullable=True)
     error = Column(Text, nullable=True)
     latency_ms = Column(Integer, nullable=True)
-    created_at = Column(DateTime, nullable=False, default=utcnow)
+    created_at = Column(DateTime, nullable=False, default=utc_now)

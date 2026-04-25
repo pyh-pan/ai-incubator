@@ -1,11 +1,10 @@
-from datetime import datetime
-
 import uuid
 from sqlalchemy import Column, DateTime, Enum as SQLEnum, ForeignKey, JSON, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
+from app.core.time import utc_now
 
 JSONBType = JSON().with_variant(JSONB, "postgresql")
 
@@ -25,8 +24,8 @@ class Project(Base):
     thinking_stage = Column(String, nullable=True)
     thinking_mode = Column(String, nullable=True)
     summary_snapshot = Column(JSONBType, nullable=True)
-    created_at = Column(DateTime, nullable=False, default=lambda: datetime.utcnow())
-    updated_at = Column(DateTime, nullable=False, default=lambda: datetime.utcnow(), onupdate=lambda: datetime.utcnow())
+    created_at = Column(DateTime, nullable=False, default=utc_now)
+    updated_at = Column(DateTime, nullable=False, default=utc_now, onupdate=utc_now)
 
     # Relationships
     user = relationship("User", back_populates="projects")
