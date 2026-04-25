@@ -1,10 +1,25 @@
+import json
+
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.models import ConversationMessageV2, IncubatorRun, Project, ThinkingNode
 from app.schemas.v2 import AIMapUpdate, AIOrchestratorOutput, CurrentSummary, MapOperation, TurnRequest
+from app.services.ai_service import get_client
 from app.services.map_update_service import validate_operation_risk
 from app.services.thinking_mode_service import ThinkingStateSignals, recommend_thinking_mode
+
+
+SYSTEM_CONTEXT_V2 = """You are AI Incubator's thinking partner.
+Help the user clarify vague ideas through questions, reflection, and structure.
+Do not use visible fixed frameworks. Use them only as private inspiration.
+Balance divergent and convergent thinking.
+Ask one main question per turn.
+Separate facts, assumptions, insights, open questions, decisions, risks, and next steps.
+Suggest high-risk map restructuring only as suggestions requiring confirmation.
+Return only valid JSON matching the requested schema.
+"""
 
 
 def ensure_root_node(db: Session, project: Project) -> tuple[ThinkingNode, bool]:
@@ -107,7 +122,7 @@ def build_signals(db: Session, project_id) -> ThinkingStateSignals:
     )
 
 
-def mock_ai_response(content: str, mode) -> AIOrchestratorOutput:
+def mock_ai_response(content: str, mode, context: dict | None = None) -> AIOrchestratorOutput:
     trimmed_content = content.strip()
     question = "Who is the first specific user who would need this badly enough to try an early version?"
     if "?" in trimmed_content:
@@ -142,7 +157,63 @@ def mock_ai_response(content: str, mode) -> AIOrchestratorOutput:
     )
 
 
-def run_turn(db: Session, project: Project, request: TurnRequest) -> tuple[ConversationMessageV2, ConversationMessageV2]:
+def build_ai_context(
+    project: Project,
+    request: TurnRequest,
+    signals: ThinkingStateSignals,
+    recommended_mode: str,
+    root_node: ThinkingNode,
+) -> dict:
+    return {
+        "project": {
+            "id": str(project.id),
+            "title": project.title,
+            "thinking_stage": project.thinking_stage,
+            "thinking_mode": project.thinking_mode,
+            "summary_snapshot": project.summary_snapshot,
+        },
+        "root_node": {
+            "id": str(root_node.id),
+            "title": root_node.title,
+            "summary": root_node.summary,
+        },
+        "user_message": {
+            "content": request.content,
+            "source": request.source,
+            "node_id": str(request.node_id) if request.node_id else None,
+        },
+        "recommended_mode": recommended_mode,
+        "signals": signals.__dict__,
+        "output_schema": AIOrchestratorOutput.model_json_schema(),
+    }
+
+
+def call_ai_orchestrator(content: str, mode: str, context: dict | None = None) -> AIOrchestratorOutput:
+    if not settings.OPENAI_API_KEY:
+        return mock_ai_response(content, mode)
+
+    response = get_client().chat.completions.create(
+        model=settings.OPENAI_MODEL,
+        messages=[
+            {"role": "system", "content": SYSTEM_CONTEXT_V2},
+            {
+                "role": "user",
+                "content": json.dumps(context or {"content": content, "recommended_mode": mode}, ensure_ascii=False),
+            },
+        ],
+        temperature=0.4,
+        response_format={"type": "json_object"},
+    )
+    response_content = response.choices[0].message.content or "{}"
+    return AIOrchestratorOutput.model_validate_json(response_content)
+
+
+def run_turn(
+    db: Session,
+    project: Project,
+    request: TurnRequest,
+    ai_func=call_ai_orchestrator,
+) -> tuple[ConversationMessageV2, ConversationMessageV2]:
     root_node, _ = ensure_root_node(db, project)
     signals = build_signals(db, project.id)
     signals.user_requested_action_plan = "plan" in request.content.lower() or "next step" in request.content.lower()
@@ -159,7 +230,8 @@ def run_turn(db: Session, project: Project, request: TurnRequest) -> tuple[Conve
     db.add(user_message)
     db.flush()
 
-    ai_output = mock_ai_response(request.content, recommendation.mode)
+    ai_context = build_ai_context(project, request, signals, recommendation.mode, root_node)
+    ai_output = ai_func(request.content, recommendation.mode, ai_context)
 
     assistant_message = ConversationMessageV2(
         project_id=project.id,
@@ -208,12 +280,13 @@ def run_turn(db: Session, project: Project, request: TurnRequest) -> tuple[Conve
             project_id=project.id,
             user_message_id=user_message.id,
             assistant_message_id=assistant_message.id,
-            model="mock-v2",
+            model=settings.OPENAI_MODEL if settings.OPENAI_API_KEY else "mock-v2",
             input_payload={
                 "content": request.content,
                 "source": request.source,
                 "node_id": str(request.node_id) if request.node_id else None,
                 "signals": signals.__dict__,
+                "context": ai_context,
             },
             output_payload=ai_output.model_dump(mode="json"),
             latency_ms=0,
