@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Form, Input, Button, message, Card, Typography } from 'antd'
 import { useNavigate, Link } from 'react-router-dom'
 import { UserOutlined, LockOutlined } from '@ant-design/icons'
@@ -6,7 +5,7 @@ import { useMutation } from '@tanstack/react-query'
 import { authApi } from '../api'
 import { useAuthStore } from '../stores/authStore'
 
-const { Title, Text } = Typography
+const { Text } = Typography
 
 export default function LoginPage() {
   const navigate = useNavigate()

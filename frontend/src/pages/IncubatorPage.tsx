@@ -1,21 +1,18 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Button, Spin, message } from 'antd'
+import { Button, Spin } from 'antd'
 import { ArrowLeftOutlined } from '@ant-design/icons'
 import { useQuery } from '@tanstack/react-query'
 import ReactFlow, {
   Background,
   Controls,
   MiniMap,
-  Node,
-  Edge,
-  NodeTypes,
-  Position,
-  Node as FlowNode,
-  Edge as FlowEdge,
+  applyNodeChanges,
+  addEdge,
 } from 'reactflow'
+import type { NodeTypes } from 'reactflow'
 import 'reactflow/dist/style.css'
-import { projectApi, nodeApi, aiApi } from '../api'
+import { projectApi, nodeApi } from '../api'
 import type { MindmapNode } from '../types'
 import MindmapNodeComponent from '../components/mindmap/MindmapNode'
 
@@ -35,41 +32,41 @@ export default function IncubatorPage() {
     enabled: !!projectId,
   })
 
-  const { data: mindmapNodes, isLoading: nodesLoading } = useQuery({
+  const { data: mindmapNodes = [], isLoading: nodesLoading } = useQuery({
     queryKey: ['mindmap', projectId],
     queryFn: () => nodeApi.getByProject(projectId!),
     enabled: !!projectId,
-    onSuccess: (data) => {
-      // Convert API data to ReactFlow format
-      const flowNodes = data.map((node: MindmapNode) => ({
-        id: node.id,
-        type: 'mindmapNode',
-        position: node.position || { x: Math.random() * 500, y: Math.random() * 500 },
-        data: {
-          label: node.label,
-          status: node.status,
-          question: node.question,
-          context: node.context,
-          answer: node.answer,
-          extractedPoints: node.extracted_points,
-          depth: node.depth,
-        },
+  })
+
+  useEffect(() => {
+    const flowNodes = mindmapNodes.map((node: MindmapNode) => ({
+      id: node.id,
+      type: 'mindmapNode',
+      position: node.position || { x: Math.random() * 500, y: Math.random() * 500 },
+      data: {
+        label: node.label,
+        status: node.status,
+        question: node.question,
+        context: node.context,
+        answer: node.answer,
+        extractedPoints: node.extracted_points,
+        depth: node.depth,
+      },
+    }))
+
+    const flowEdges = mindmapNodes
+      .filter((node: MindmapNode) => node.parent_id)
+      .map((node: MindmapNode) => ({
+        id: `e-${node.parent_id}-${node.id}`,
+        source: node.parent_id!,
+        target: node.id,
+        animated: true,
+        style: { stroke: '#94a3b8', strokeWidth: 2 },
       }))
 
-      const flowEdges = data
-        .filter((node: MindmapNode) => node.parent_id)
-        .map((node: MindmapNode) => ({
-          id: `e-${node.parent_id}-${node.id}`,
-          source: node.parent_id!,
-          target: node.id,
-          animated: true,
-          style: { stroke: '#94a3b8', strokeWidth: 2 },
-        }))
-
-      setNodes(flowNodes)
-      setEdges(flowEdges)
-    },
-  })
+    setNodes(flowNodes)
+    setEdges(flowEdges)
+  }, [mindmapNodes])
 
   const onNodesChange = useCallback((changes: any) => {
     setNodes((nds) => {
@@ -82,7 +79,7 @@ export default function IncubatorPage() {
       })
       return updated
     })
-  }, [projectId])
+  }, [])
 
   const onConnect = useCallback((params: any) => {
     setEdges((eds) => addEdge(params, eds))

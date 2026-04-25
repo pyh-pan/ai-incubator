@@ -26,7 +26,7 @@ export default function ProjectListPage() {
       message.success('项目创建成功')
       setIsModalOpen(false)
       form.resetFields()
-      queryClient.invalidateQueries(['projects'])
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
     },
     onError: (error: any) => {
       message.error(error.response?.data?.detail || '创建失败')
@@ -37,7 +37,7 @@ export default function ProjectListPage() {
     mutationFn: projectApi.delete,
     onSuccess: () => {
       message.success('项目已删除')
-      queryClient.invalidateQueries(['projects'])
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
     },
     onError: (error: any) => {
       message.error(error.response?.data?.detail || '删除失败')
@@ -99,7 +99,7 @@ export default function ProjectListPage() {
                 <Popconfirm
                   title="确定删除这个项目吗？"
                   onConfirm={(e) => {
-                    e.stopPropagation()
+                    e?.stopPropagation()
                     handleDelete(project.id)
                   }}
                   okText="确定"

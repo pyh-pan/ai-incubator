@@ -7,6 +7,8 @@ from sqlalchemy.orm import relationship
 
 from app.core.database import Base
 
+JSONBType = JSON().with_variant(JSONB, "postgresql")
+
 
 class MindmapNode(Base):
     """Mindmap node model."""
@@ -20,14 +22,14 @@ class MindmapNode(Base):
     question = Column(Text, nullable=True)
     context = Column(Text, nullable=True)
     answer = Column(Text, nullable=True)
-    extracted_points = Column(JSONB, nullable=True)  # List[str]
+    extracted_points = Column(JSONBType, nullable=True)  # List[str]
     status = Column(
         SQLEnum("unanswered", "in_progress", "answered"),
         nullable=False,
         default="unanswered"
     )
     depth = Column(Integer, nullable=False, default=0)
-    position = Column(JSONB, nullable=True)  # {x: number, y: number}
+    position = Column(JSONBType, nullable=True)  # {x: number, y: number}
     created_at = Column(DateTime, nullable=False, default=lambda: datetime.utcnow())
     updated_at = Column(DateTime, nullable=False, default=lambda: datetime.utcnow(), onupdate=lambda: datetime.utcnow())
 
@@ -46,7 +48,7 @@ class ConversationHistory(Base):
     node_id = Column(UUID(as_uuid=True), ForeignKey("mindmap_nodes.id"), nullable=True)
     role = Column(SQLEnum("user", "assistant"), nullable=False)
     content = Column(Text, nullable=False)
-    metadata = Column(JSONB, nullable=True)
+    message_metadata = Column("metadata", JSONBType, nullable=True)
     created_at = Column(DateTime, nullable=False, default=lambda: datetime.utcnow())
 
 

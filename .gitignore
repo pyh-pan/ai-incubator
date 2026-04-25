@@ -1,2 +1,9 @@
 .superpowers/
 .worktrees/
+__pycache__/
+*.py[cod]
+htmlcov/
+.coverage
+dist/
+*.db
+.test

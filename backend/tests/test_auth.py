@@ -124,3 +124,43 @@ def test_login_wrong_credentials(client):
         },
     )
     assert response.status_code == 401
+
+
+def test_ai_generate_question_endpoint(client):
+    """Test AI question generation endpoint."""
+    response = client.post(
+        "/ai/generate-question",
+        json={
+            "framework": "product_manager",
+            "context": "AI diary app",
+            "label": "目标用户",
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "question" in data
+    assert "context" in data
+
+
+def test_ai_extract_points_endpoint(client):
+    """Test AI point extraction endpoint fallback shape."""
+    response = client.post(
+        "/ai/extract-points",
+        json={"answer": "Users want a simple diary tool."},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data["points"], list)
+    assert "summary" in data
+
+
+def test_ai_followup_endpoint(client):
+    """Test AI follow-up endpoint fallback shape."""
+    response = client.post(
+        "/ai/followup/test-node",
+        json={"parent_answer": "Users need emotional insights.", "label": "情感分析"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "question" in data
+    assert "context" in data

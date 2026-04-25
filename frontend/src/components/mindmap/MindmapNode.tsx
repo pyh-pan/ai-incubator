@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { Handle, Position } from 'reactflow'
 import type { NodeProps } from 'reactflow'
 import { QuestionCircleOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons'
-import type { NodeStatus } from '../../../types'
+import type { NodeStatus } from '../../types'
 
 interface MindmapNodeData {
   label: string
@@ -14,9 +14,14 @@ interface MindmapNodeData {
   depth: number
 }
 
-export default function MindmapNode({ data, selected }: NodeProps<MindmapNodeData>) {
+interface CardPosition {
+  x: number
+  y: number
+}
+
+export default function MindmapNode({ data }: NodeProps<MindmapNodeData>) {
   const [showCard, setShowCard] = useState(false)
-  const [cardPosition, setCardPosition] = useState<Position>({ x: 0, y: 0 })
+  const [cardPosition, setCardPosition] = useState<CardPosition>({ x: 0, y: 0 })
   const [isFixed, setIsFixed] = useState(false)
 
   const onMouseEnter = useCallback((e: React.MouseEvent) => {
@@ -97,8 +102,8 @@ export default function MindmapNode({ data, selected }: NodeProps<MindmapNodeDat
         )}
       </div>
 
-      <Handle type="target" position="left" className="!bg-sky-400" />
-      <Handle type="source" position="right" className="!bg-sky-400" />
+      <Handle type="target" position={Position.Left} className="!bg-sky-400" />
+      <Handle type="source" position={Position.Right} className="!bg-sky-400" />
 
       {showCard && !isFixed && (
         <div

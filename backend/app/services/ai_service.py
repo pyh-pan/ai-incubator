@@ -4,7 +4,15 @@ from openai import OpenAI
 
 from app.core.config import settings
 
-client = OpenAI(api_key=settings.OPENAI_API_KEY)
+client: OpenAI | None = None
+
+
+def get_client() -> OpenAI:
+    """Create OpenAI client lazily so imports and tests do not require network config."""
+    global client
+    if client is None:
+        client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    return client
 
 
 # Framework templates
@@ -54,7 +62,7 @@ class AIService:
     def recommend_framework(idea: str) -> dict[str, Any]:
         """Recommend a framework based on the user's idea."""
         try:
-            response = client.chat.completions.create(
+            response = get_client().chat.completions.create(
                 model=settings.OPENAI_MODEL,
                 messages=[
                     {
@@ -118,7 +126,7 @@ class AIService:
     def extract_points(answer: str) -> dict[str, Any]:
         """Extract key points from user's answer."""
         try:
-            response = client.chat.completions.create(
+            response = get_client().chat.completions.create(
                 model=settings.OPENAI_MODEL,
                 messages=[
                     {
@@ -153,7 +161,7 @@ class AIService:
     def generate_followup(parent_answer: str, label: str = "") -> dict[str, Any]:
         """Generate a follow-up question based on parent answer."""
         try:
-            response = client.chat.completions.create(
+            response = get_client().chat.completions.create(
                 model=settings.OPENAI_MODEL,
                 messages=[
                     {

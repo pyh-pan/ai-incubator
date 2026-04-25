@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Form, Input, Button, message, Card, Typography } from 'antd'
 import { useNavigate, Link } from 'react-router-dom'
 import { UserOutlined, LockOutlined } from '@ant-design/icons'
@@ -95,7 +94,8 @@ export default function RegisterPage() {
                   }
                   return Promise.reject(new Error('两次输入的密码不一致'))
                 },
-              })}
+              }),
+            ]}
           >
             <Input.Password
               prefix={<LockOutlined className="text-slate-400" />}
