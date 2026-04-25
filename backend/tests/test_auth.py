@@ -2,6 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from app.main import app
 from app.core.database import Base, get_db
@@ -9,9 +10,13 @@ from app.models import User
 
 
 # Use in-memory SQLite for testing
-TEST_DATABASE_URL = "sqlite:///.test"
+TEST_DATABASE_URL = "sqlite://"
 
-engine = create_engine(TEST_DATABASE_URL, connect_args={"check_same_thread": False})
+engine = create_engine(
+    TEST_DATABASE_URL,
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
@@ -65,6 +70,24 @@ def test_register_user(client):
     data = response.json()
     assert "access_token" in data
     assert data["token_type"] == "bearer"
+    assert data["user"]["email"] == "test@example.com"
+
+
+def test_register_user_via_api_prefix(client):
+    """Test frontend /api-prefixed user registration."""
+    response = client.post(
+        "/api/auth/register",
+        json={
+            "email": "api-test@example.com",
+            "username": "apitestuser",
+            "password": "testpass123",
+        },
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert "access_token" in data
+    assert data["token_type"] == "bearer"
+    assert data["user"]["email"] == "api-test@example.com"
 
 
 def test_register_duplicate_email(client):
@@ -112,6 +135,7 @@ def test_login_success(client):
     assert response.status_code == 200
     data = response.json()
     assert "access_token" in data
+    assert data["user"]["email"] == "login@example.com"
 
 
 def test_login_wrong_credentials(client):

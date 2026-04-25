@@ -39,6 +39,10 @@ app.include_router(auth_router)
 app.include_router(projects_router)
 app.include_router(nodes_router)
 app.include_router(ai_router)
+app.include_router(auth_router, prefix="/api")
+app.include_router(projects_router, prefix="/api")
+app.include_router(nodes_router, prefix="/api")
+app.include_router(ai_router, prefix="/api")
 app.include_router(v2_router, prefix="/api")
 
 
