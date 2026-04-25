@@ -1,8 +1,10 @@
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.security import create_access_token, verify_password, get_password_hash
+from app.core.security import create_access_token, get_current_user_id, get_password_hash, verify_password
 from app.models import User
 from app.schemas.user import Token, UserCreate, UserLogin, UserResponse
 
@@ -20,7 +22,13 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)) -> Token:
             detail="Email already registered"
         )
 
-    # Create new user
+    existing_username = db.query(User).filter(User.username == user_data.username).first()
+    if existing_username:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username already registered"
+        )
+
     new_user = User(
         email=user_data.email,
         username=user_data.username,
@@ -32,7 +40,7 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)) -> Token:
 
     # Generate token
     access_token = create_access_token(subject=new_user.id)
-    return Token(access_token=access_token, user=new_user)
+    return Token(access_token=access_token, user=UserResponse.model_validate(new_user))
 
 
 @router.post("/login", response_model=Token)
@@ -48,14 +56,16 @@ def login(user_data: UserLogin, db: Session = Depends(get_db)) -> Token:
         )
 
     access_token = create_access_token(subject=user.id)
-    return Token(access_token=access_token, user=user)
+    return Token(access_token=access_token, user=UserResponse.model_validate(user))
 
 
 @router.get("/me", response_model=UserResponse)
 def read_current_user(
+    user_id: UUID = Depends(get_current_user_id),
     db: Session = Depends(get_db),
-    token: str = Depends(get_db)  # TODO: Implement proper token dependency
-) -> User:
+) -> UserResponse:
     """Get current user."""
-    # TODO: Implement proper JWT verification
-    raise HTTPException(status_code=501, detail="Not implemented")
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    return UserResponse.model_validate(user)

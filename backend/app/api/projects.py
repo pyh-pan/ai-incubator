@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.security import get_current_user_id
 from app.models import MindmapNode, Project
 from app.schemas.node import NodeResponse
 from app.schemas.project import ProjectCreate, ProjectResponse
@@ -12,20 +13,13 @@ from app.schemas.project import ProjectCreate, ProjectResponse
 router = APIRouter(prefix="/projects", tags=["projects"])
 
 
-def get_current_user_id() -> UUID:
-    """TODO: Get current user ID from JWT token."""
-    # Placeholder for now
-    return UUID("00000000-0000-4000-8000-00000000000a")
-
-
 @router.post("", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
 def create_project(
     project_data: ProjectCreate,
-    db: Session = Depends(get_db)
+    user_id: UUID = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
 ) -> Project:
     """Create a new project."""
-    user_id = get_current_user_id()
-
     new_project = Project(
         user_id=user_id,
         title=project_data.title,
@@ -40,18 +34,23 @@ def create_project(
 
 
 @router.get("", response_model=list[ProjectResponse])
-def list_projects(db: Session = Depends(get_db)) -> list[Project]:
+def list_projects(
+    user_id: UUID = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> list[Project]:
     """List all projects for current user."""
-    user_id = get_current_user_id()
-
     projects = db.query(Project).filter(Project.user_id == user_id).all()
     return projects
 
 
 @router.get("/{project_id}", response_model=ProjectResponse)
-def get_project(project_id: str, db: Session = Depends(get_db)) -> Project:
+def get_project(
+    project_id: str,
+    user_id: UUID = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> Project:
     """Get a project by ID."""
-    project = db.query(Project).filter(Project.id == project_id).first()
+    project = db.query(Project).filter(Project.id == project_id, Project.user_id == user_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     return project
@@ -61,10 +60,11 @@ def get_project(project_id: str, db: Session = Depends(get_db)) -> Project:
 def update_project(
     project_id: str,
     project_data: dict[str, Any],
-    db: Session = Depends(get_db)
+    user_id: UUID = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
 ) -> Project:
     """Update a project."""
-    project = db.query(Project).filter(Project.id == project_id).first()
+    project = db.query(Project).filter(Project.id == project_id, Project.user_id == user_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
@@ -78,9 +78,13 @@ def update_project(
 
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_project(project_id: str, db: Session = Depends(get_db)) -> None:
+def delete_project(
+    project_id: str,
+    user_id: UUID = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> None:
     """Delete a project."""
-    project = db.query(Project).filter(Project.id == project_id).first()
+    project = db.query(Project).filter(Project.id == project_id, Project.user_id == user_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
@@ -90,8 +94,16 @@ def delete_project(project_id: str, db: Session = Depends(get_db)) -> None:
 
 
 @router.get("/{project_id}/mindmap", response_model=list[NodeResponse])
-def get_project_mindmap(project_id: str, db: Session = Depends(get_db)) -> list[MindmapNode]:
+def get_project_mindmap(
+    project_id: str,
+    user_id: UUID = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> list[MindmapNode]:
     """Get all nodes for a project's mindmap."""
+    project = db.query(Project).filter(Project.id == project_id, Project.user_id == user_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
     nodes = db.query(MindmapNode).filter(
         MindmapNode.project_id == project_id,
         MindmapNode.parent_id.is_(None)

@@ -6,6 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.core.database import Base, get_db
+from app.core.security import create_access_token
 from app.main import app
 from app.models import Project, RestructureSuggestion, ThinkingNode, User
 
@@ -35,15 +36,32 @@ def client():
 
 
 @pytest.fixture
-def project_id():
+def user():
     db = TestingSessionLocal()
     try:
         user = User(
             email=f"{uuid4()}@example.com",
-            username="v2-test-user",
+            username=f"v2-test-user-{uuid4()}",
             hashed_password="not-used",
         )
         db.add(user)
+        db.commit()
+        db.refresh(user)
+        return user
+    finally:
+        db.close()
+
+
+@pytest.fixture
+def auth_headers(user):
+    return {"Authorization": f"Bearer {create_access_token(subject=user.id)}"}
+
+
+@pytest.fixture
+def project_id(user):
+    db = TestingSessionLocal()
+    try:
+        user = db.merge(user)
         db.flush()
 
         project = Project(
@@ -60,8 +78,8 @@ def project_id():
         db.close()
 
 
-def test_workspace_bootstraps_one_center_idea_node(client, project_id):
-    response = client.get(f"/api/v2/projects/{project_id}/workspace")
+def test_workspace_bootstraps_one_center_idea_node(client, project_id, auth_headers):
+    response = client.get(f"/api/v2/projects/{project_id}/workspace", headers=auth_headers)
 
     assert response.status_code == 200
     data = response.json()
@@ -77,9 +95,9 @@ def test_workspace_bootstraps_one_center_idea_node(client, project_id):
     assert root["title"] == "AI Incubator v2"
 
 
-def test_repeated_workspace_fetch_does_not_create_duplicate_root_nodes(client, project_id):
-    first_response = client.get(f"/api/v2/projects/{project_id}/workspace")
-    second_response = client.get(f"/api/v2/projects/{project_id}/workspace")
+def test_repeated_workspace_fetch_does_not_create_duplicate_root_nodes(client, project_id, auth_headers):
+    first_response = client.get(f"/api/v2/projects/{project_id}/workspace", headers=auth_headers)
+    second_response = client.get(f"/api/v2/projects/{project_id}/workspace", headers=auth_headers)
 
     assert first_response.status_code == 200
     assert second_response.status_code == 200
@@ -99,7 +117,7 @@ def test_repeated_workspace_fetch_does_not_create_duplicate_root_nodes(client, p
         db.close()
 
 
-def test_workspace_reuses_existing_parentless_non_idea_node(client, project_id):
+def test_workspace_reuses_existing_parentless_non_idea_node(client, project_id, auth_headers):
     db = TestingSessionLocal()
     try:
         existing_root = ThinkingNode(
@@ -118,7 +136,7 @@ def test_workspace_reuses_existing_parentless_non_idea_node(client, project_id):
     finally:
         db.close()
 
-    response = client.get(f"/api/v2/projects/{project_id}/workspace")
+    response = client.get(f"/api/v2/projects/{project_id}/workspace", headers=auth_headers)
 
     assert response.status_code == 200
     data = response.json()
@@ -128,8 +146,8 @@ def test_workspace_reuses_existing_parentless_non_idea_node(client, project_id):
     assert parentless_nodes[0]["title"] == "Existing root question"
 
 
-def test_create_project_without_framework_defaults_to_general(client):
-    response = client.post("/projects", json={"title": "Legacy default framework"})
+def test_create_project_without_framework_defaults_to_general(client, auth_headers):
+    response = client.post("/projects", json={"title": "Legacy default framework"}, headers=auth_headers)
 
     assert response.status_code == 201
     data = response.json()
@@ -137,10 +155,11 @@ def test_create_project_without_framework_defaults_to_general(client):
     assert data["framework"] == "general"
 
 
-def test_turn_creates_messages_and_question_node(client, project_id):
+def test_turn_creates_messages_and_question_node(client, project_id, auth_headers):
     response = client.post(
         f"/api/v2/projects/{project_id}/turns",
         json={"content": "I want to build an AI research assistant."},
+        headers=auth_headers,
     )
 
     assert response.status_code == 200
@@ -161,13 +180,28 @@ def test_turn_creates_messages_and_question_node(client, project_id):
     assert question_nodes[0]["question"]
 
 
-def test_reject_missing_suggestion_returns_404(client):
-    response = client.post(f"/api/v2/restructure-suggestions/{uuid4()}/reject")
+def test_reject_missing_suggestion_returns_404(client, auth_headers):
+    response = client.post(f"/api/v2/restructure-suggestions/{uuid4()}/reject", headers=auth_headers)
 
     assert response.status_code == 404
 
 
-def test_reject_suggestion_marks_resolved_and_hides_it(client, project_id):
+def test_workspace_rejects_missing_token(client, project_id):
+    response = client.get(f"/api/v2/projects/{project_id}/workspace")
+
+    assert response.status_code == 401
+
+
+def test_workspace_rejects_other_users_project(client, project_id):
+    other_user_id = uuid4()
+    headers = {"Authorization": f"Bearer {create_access_token(subject=other_user_id)}"}
+
+    response = client.get(f"/api/v2/projects/{project_id}/workspace", headers=headers)
+
+    assert response.status_code == 404
+
+
+def test_reject_suggestion_marks_resolved_and_hides_it(client, project_id, auth_headers):
     db = TestingSessionLocal()
     try:
         suggestion = RestructureSuggestion(
@@ -183,7 +217,7 @@ def test_reject_suggestion_marks_resolved_and_hides_it(client, project_id):
     finally:
         db.close()
 
-    response = client.post(f"/api/v2/restructure-suggestions/{suggestion_id}/reject")
+    response = client.post(f"/api/v2/restructure-suggestions/{suggestion_id}/reject", headers=auth_headers)
 
     assert response.status_code == 200
     assert response.json()["suggestions"] == []
@@ -197,7 +231,7 @@ def test_reject_suggestion_marks_resolved_and_hides_it(client, project_id):
         db.close()
 
 
-def test_accept_suggestion_applies_operation_and_hides_it(client, project_id):
+def test_accept_suggestion_applies_operation_and_hides_it(client, project_id, auth_headers):
     db = TestingSessionLocal()
     try:
         root = ThinkingNode(
@@ -228,7 +262,7 @@ def test_accept_suggestion_applies_operation_and_hides_it(client, project_id):
     finally:
         db.close()
 
-    response = client.post(f"/api/v2/restructure-suggestions/{suggestion_id}/accept")
+    response = client.post(f"/api/v2/restructure-suggestions/{suggestion_id}/accept", headers=auth_headers)
 
     assert response.status_code == 200
     data = response.json()

@@ -112,6 +112,28 @@ def test_register_duplicate_email(client):
     assert response.status_code == 400
 
 
+def test_register_duplicate_username(client):
+    """Test registration with duplicate username."""
+    client.post(
+        "/auth/register",
+        json={
+            "email": "first@example.com",
+            "username": "sameuser",
+            "password": "testpass123",
+        },
+    )
+
+    response = client.post(
+        "/auth/register",
+        json={
+            "email": "second@example.com",
+            "username": "sameuser",
+            "password": "testpass123",
+        },
+    )
+    assert response.status_code == 400
+
+
 def test_login_success(client):
     """Test successful login."""
     # First register
@@ -136,6 +158,33 @@ def test_login_success(client):
     data = response.json()
     assert "access_token" in data
     assert data["user"]["email"] == "login@example.com"
+
+
+def test_auth_me_returns_current_user(client):
+    """Test current user endpoint with a bearer token."""
+    register_response = client.post(
+        "/auth/register",
+        json={
+            "email": "me@example.com",
+            "username": "meuser",
+            "password": "testpass123",
+        },
+    )
+    token = register_response.json()["access_token"]
+
+    response = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["email"] == "me@example.com"
+    assert data["username"] == "meuser"
+
+
+def test_auth_me_missing_token_returns_401(client):
+    """Test current user endpoint rejects missing credentials."""
+    response = client.get("/auth/me")
+
+    assert response.status_code == 401
 
 
 def test_login_wrong_credentials(client):
