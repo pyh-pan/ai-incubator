@@ -23,6 +23,7 @@ def create_project(
     new_project = Project(
         user_id=user_id,
         title=project_data.title,
+        more_info=project_data.more_info,
         framework=project_data.framework.value,
         status="active"
     )

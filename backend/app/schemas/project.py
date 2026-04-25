@@ -15,11 +15,13 @@ class FrameworkType(str, Enum):
 
 class ProjectCreate(BaseModel):
     title: str
+    more_info: str | None = None
     framework: FrameworkType = FrameworkType.GENERAL
 
 
 class ProjectUpdate(BaseModel):
     title: str | None = None
+    more_info: str | None = None
     framework: FrameworkType | None = None
     status: str | None = None
 
@@ -28,6 +30,7 @@ class ProjectResponse(BaseModel):
     id: UUID
     user_id: UUID
     title: str
+    more_info: str | None = None
     framework: str
     status: str
     created_at: datetime

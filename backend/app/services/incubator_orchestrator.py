@@ -168,6 +168,7 @@ def build_ai_context(
         "project": {
             "id": str(project.id),
             "title": project.title,
+            "more_info": project.more_info,
             "thinking_stage": project.thinking_stage,
             "thinking_mode": project.thinking_mode,
             "summary_snapshot": project.summary_snapshot,

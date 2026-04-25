@@ -147,11 +147,19 @@ def test_workspace_reuses_existing_parentless_non_idea_node(client, project_id, 
 
 
 def test_create_project_without_framework_defaults_to_general(client, auth_headers):
-    response = client.post("/projects", json={"title": "Legacy default framework"}, headers=auth_headers)
+    response = client.post(
+        "/projects",
+        json={
+            "title": "Legacy default framework",
+            "more_info": "Early users are solo founders validating fuzzy product ideas.",
+        },
+        headers=auth_headers,
+    )
 
     assert response.status_code == 201
     data = response.json()
     assert data["title"] == "Legacy default framework"
+    assert data["more_info"] == "Early users are solo founders validating fuzzy product ideas."
     assert data["framework"] == "general"
 
 

@@ -34,7 +34,7 @@ export const authApi = {
 
 // Project APIs
 export const projectApi = {
-  create: async (data: { title: string; framework?: FrameworkType }) => {
+  create: async (data: { title: string; more_info?: string }) => {
     const response = await apiClient.post<Project>('/projects', data)
     return response.data
   },

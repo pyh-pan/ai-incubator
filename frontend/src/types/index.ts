@@ -14,6 +14,7 @@ export interface Project {
   id: string
   user_id: string
   title: string
+  more_info?: string | null
   framework: FrameworkType
   status: 'active' | 'archived'
   created_at: string

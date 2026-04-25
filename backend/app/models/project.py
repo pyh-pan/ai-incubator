@@ -1,7 +1,7 @@
 from datetime import datetime
 
 import uuid
-from sqlalchemy import Column, DateTime, Enum as SQLEnum, ForeignKey, JSON, String
+from sqlalchemy import Column, DateTime, Enum as SQLEnum, ForeignKey, JSON, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 
@@ -18,6 +18,7 @@ class Project(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     title = Column(String, nullable=False)
+    more_info = Column(Text, nullable=True)
     framework = Column(String, nullable=False)  # product_manager, business_canvas, etc.
     status = Column(SQLEnum("active", "archived"), nullable=False, default="active")
     system_context_version = Column(String, nullable=False, default="v2.0")
