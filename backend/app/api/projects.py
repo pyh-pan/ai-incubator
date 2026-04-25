@@ -1,4 +1,5 @@
 from typing import Any
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -11,10 +12,10 @@ from app.schemas.project import ProjectCreate, ProjectResponse
 router = APIRouter(prefix="/projects", tags=["projects"])
 
 
-def get_current_user_id() -> str:
+def get_current_user_id() -> UUID:
     """TODO: Get current user ID from JWT token."""
     # Placeholder for now
-    return "00000000-0000-0000-0000-000000000000"
+    return UUID("00000000-0000-4000-8000-00000000000a")
 
 
 @router.post("", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)

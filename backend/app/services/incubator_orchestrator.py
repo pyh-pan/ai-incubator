@@ -7,19 +7,18 @@ from app.services.map_update_service import validate_operation_risk
 from app.services.thinking_mode_service import ThinkingStateSignals, recommend_thinking_mode
 
 
-def ensure_root_node(db: Session, project: Project) -> ThinkingNode:
+def ensure_root_node(db: Session, project: Project) -> tuple[ThinkingNode, bool]:
     root_node = (
         db.query(ThinkingNode)
         .filter(
             ThinkingNode.project_id == project.id,
             ThinkingNode.parent_id.is_(None),
-            ThinkingNode.kind == "idea",
         )
         .order_by(ThinkingNode.created_at.asc())
         .first()
     )
     if root_node:
-        return root_node
+        return root_node, False
 
     root_node = ThinkingNode(
         project_id=project.id,
@@ -35,7 +34,7 @@ def ensure_root_node(db: Session, project: Project) -> ThinkingNode:
     )
     db.add(root_node)
     db.flush()
-    return root_node
+    return root_node, True
 
 
 def build_signals(db: Session, project_id) -> ThinkingStateSignals:
@@ -144,7 +143,7 @@ def mock_ai_response(content: str, mode) -> AIOrchestratorOutput:
 
 
 def run_turn(db: Session, project: Project, request: TurnRequest) -> tuple[ConversationMessageV2, ConversationMessageV2]:
-    root_node = ensure_root_node(db, project)
+    root_node, _ = ensure_root_node(db, project)
     signals = build_signals(db, project.id)
     signals.user_requested_action_plan = "plan" in request.content.lower() or "next step" in request.content.lower()
     signals.user_expressed_confusion = "confused" in request.content.lower() or "unclear" in request.content.lower()

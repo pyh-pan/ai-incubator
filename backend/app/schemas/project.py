@@ -1,5 +1,6 @@
 from datetime import datetime
 from enum import Enum
+from uuid import UUID
 
 from pydantic import BaseModel
 
@@ -24,8 +25,8 @@ class ProjectUpdate(BaseModel):
 
 
 class ProjectResponse(BaseModel):
-    id: str
-    user_id: str
+    id: UUID
+    user_id: UUID
     title: str
     framework: str
     status: str

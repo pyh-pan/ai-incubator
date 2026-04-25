@@ -19,9 +19,10 @@ def get_project_or_404(db: Session, project_id: UUID) -> Project:
 
 
 def build_workspace(db: Session, project: Project) -> dict:
-    ensure_root_node(db, project)
-    db.commit()
-    db.refresh(project)
+    _, root_created = ensure_root_node(db, project)
+    if root_created:
+        db.commit()
+        db.refresh(project)
 
     messages = (
         db.query(ConversationMessageV2)
