@@ -8,7 +8,7 @@ export interface User {
 }
 
 // Project types
-export type FrameworkType = 'product_manager' | 'business_canvas' | 'technical_feasibility' | 'socratic'
+export type FrameworkType = 'product_manager' | 'business_canvas' | 'technical_feasibility' | 'socratic' | 'general'
 
 export interface Project {
   id: string

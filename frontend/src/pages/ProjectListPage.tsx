@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, Card, Modal, Form, Input, Select, message, Empty, Tag, Popconfirm } from 'antd'
+import { Button, Card, Modal, Form, Input, message, Empty, Tag, Popconfirm } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import { PlusOutlined, DeleteOutlined, RocketOutlined } from '@ant-design/icons'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -44,8 +44,8 @@ export default function ProjectListPage() {
     },
   })
 
-  const handleCreate = (values: any) => {
-    createMutation.mutate(values)
+  const handleCreate = (values: { title: string }) => {
+    createMutation.mutate({ title: values.title, framework: 'general' })
   }
 
   const handleDelete = (id: string) => {
@@ -57,6 +57,7 @@ export default function ProjectListPage() {
     { label: '商业模式画布', value: 'business_canvas' },
     { label: '技术可行性', value: 'technical_feasibility' },
     { label: '苏格拉底式追问', value: 'socratic' },
+    { label: '通用探索', value: 'general' },
   ]
 
   return (
@@ -156,15 +157,6 @@ export default function ProjectListPage() {
               showCount
               maxLength={200}
             />
-          </Form.Item>
-
-          <Form.Item
-            name="framework"
-            label="思维框架"
-            rules={[{ required: true, message: '请选择思维框架' }]}
-            initialValue="product_manager"
-          >
-            <Select options={frameworkOptions} placeholder="选择一个思维框架" />
           </Form.Item>
 
           <Form.Item className="mb-0">
