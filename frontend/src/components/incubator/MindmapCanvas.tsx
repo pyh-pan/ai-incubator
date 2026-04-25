@@ -1,4 +1,9 @@
+import { useEffect, useRef, useState } from 'react'
+import MindElixir from 'mind-elixir'
+import 'mind-elixir/style.css'
+import type { MindElixirInstance, NodeObj } from 'mind-elixir'
 import type { ThinkingNode } from '../../types/incubator'
+import { buildMindElixirData } from './thinkingMapAdapter'
 
 interface MindmapCanvasProps {
   nodes: ThinkingNode[]
@@ -28,6 +33,58 @@ function getNodeDepth(node: ThinkingNode, nodesById: Map<string, ThinkingNode>) 
 }
 
 export default function MindmapCanvas({ nodes, selectedNodeId, onSelectNode }: MindmapCanvasProps) {
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const instanceRef = useRef<MindElixirInstance | null>(null)
+  const nodeMapRef = useRef(new Map<string, ThinkingNode>())
+  const [failed, setFailed] = useState(false)
+
+  nodeMapRef.current = new Map(nodes.map((node) => [node.id, node]))
+
+  useEffect(() => {
+    if (!containerRef.current) return
+
+    try {
+      const data = buildMindElixirData(nodes)
+
+      if (!instanceRef.current) {
+        const instance = new MindElixir({
+          el: containerRef.current,
+          direction: MindElixir.SIDE,
+          editable: false,
+          contextMenu: false,
+          toolBar: true,
+          keypress: true,
+          overflowHidden: false,
+        })
+
+        instance.init(data)
+        instance.bus.addListener('selectNodes', (selectedNodes: NodeObj[]) => {
+          const selected = selectedNodes[0] ? nodeMapRef.current.get(selectedNodes[0].id) : null
+          if (selected) onSelectNode(selected)
+        })
+        instanceRef.current = instance
+      } else {
+        instanceRef.current.refresh(data)
+      }
+
+      instanceRef.current.toCenter()
+      setFailed(false)
+    } catch {
+      setFailed(true)
+    }
+  }, [nodes, onSelectNode])
+
+  useEffect(() => {
+    return () => {
+      instanceRef.current?.destroy()
+      instanceRef.current = null
+    }
+  }, [])
+
+  if (!failed) {
+    return <section ref={containerRef} className="h-full w-full bg-white" />
+  }
+
   const nodesById = new Map(nodes.map((node) => [node.id, node]))
 
   return (
