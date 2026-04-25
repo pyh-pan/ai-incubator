@@ -30,10 +30,23 @@ export function useIncubatorSession(projectId: string | undefined) {
     },
   })
 
+  const suggestionMutation = useMutation({
+    mutationFn: ({ id, action }: { id: string; action: 'accept' | 'reject' }) =>
+      action === 'accept' ? incubatorApi.acceptSuggestion(id) : incubatorApi.rejectSuggestion(id),
+    onSuccess: (data) => {
+      queryClient.setQueryData<WorkspaceResponse>(['v2-workspace', projectId], data)
+    },
+    onError: (error: ApiError) => {
+      message.error(error.response?.data?.detail || '处理建议失败，请重试')
+    },
+  })
+
   return {
     workspace: workspaceQuery.data,
     isLoading: workspaceQuery.isLoading,
-    isThinking: turnMutation.isPending,
+    isThinking: turnMutation.isPending || suggestionMutation.isPending,
     submitTurn: turnMutation.mutate,
+    acceptSuggestion: (id: string) => suggestionMutation.mutate({ id, action: 'accept' }),
+    rejectSuggestion: (id: string) => suggestionMutation.mutate({ id, action: 'reject' }),
   }
 }

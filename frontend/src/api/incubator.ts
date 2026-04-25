@@ -11,4 +11,14 @@ export const incubatorApi = {
     const response = await apiClient.post<TurnResponse>(`/v2/projects/${projectId}/turns`, data)
     return response.data
   },
+
+  acceptSuggestion: async (suggestionId: string) => {
+    const response = await apiClient.post<WorkspaceResponse>(`/v2/restructure-suggestions/${suggestionId}/accept`)
+    return response.data
+  },
+
+  rejectSuggestion: async (suggestionId: string) => {
+    const response = await apiClient.post<WorkspaceResponse>(`/v2/restructure-suggestions/${suggestionId}/reject`)
+    return response.data
+  },
 }

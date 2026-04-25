@@ -1,3 +1,9 @@
+from uuid import UUID
+
+from sqlalchemy import func
+from sqlalchemy.orm import Session
+
+from app.models import ThinkingNode
 from app.schemas.v2 import MapOperation
 
 
@@ -65,3 +71,77 @@ def validate_operation_risk(operation: MapOperation) -> str:
         return "high"
 
     raise ValueError(f"Unsupported operation type: {operation.type}")
+
+
+def apply_map_operation(db: Session, project_id: UUID, operation: MapOperation) -> None:
+    validate_operation_risk(operation)
+
+    if operation.type == "create_node":
+        sort_order = db.query(func.count(ThinkingNode.id)).filter(ThinkingNode.project_id == project_id).scalar() or 0
+        db.add(
+            ThinkingNode(
+                project_id=project_id,
+                parent_id=operation.parent_id,
+                kind=operation.kind,
+                status=operation.status or "suggested",
+                title=operation.title,
+                summary=operation.summary,
+                question=operation.question,
+                sort_order=sort_order,
+                layout=None,
+                source_message_ids=[],
+                confidence=75,
+            )
+        )
+        return
+
+    if not operation.node_id:
+        raise ValueError(f"{operation.type} requires node_id")
+
+    node = (
+        db.query(ThinkingNode)
+        .filter(
+            ThinkingNode.id == operation.node_id,
+            ThinkingNode.project_id == project_id,
+        )
+        .first()
+    )
+    if not node:
+        raise ValueError("Target node not found")
+
+    if operation.type == "update_node":
+        if operation.summary is not None:
+            node.summary = operation.summary
+        if operation.question is not None:
+            node.question = operation.question
+        if operation.status is not None:
+            node.status = operation.status
+        if operation.kind is not None:
+            node.kind = operation.kind
+        return
+
+    if operation.type == "mark_answered":
+        node.status = "answered"
+        if operation.summary is not None:
+            node.answer_summary = operation.summary
+        return
+
+    if operation.type == "move_node":
+        node.parent_id = operation.parent_id
+        return
+
+    if operation.type == "rename_node":
+        node.title = operation.title
+        return
+
+    if operation.type == "delete_node":
+        db.delete(node)
+        return
+
+    raise ValueError(f"{operation.type} is not implemented")
+
+
+def apply_map_operations(db: Session, project_id: UUID, operations: list[dict]) -> None:
+    for raw_operation in operations:
+        operation = MapOperation.model_validate(raw_operation)
+        apply_map_operation(db, project_id, operation)

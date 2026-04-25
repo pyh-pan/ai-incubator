@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -7,6 +8,7 @@ from app.core.database import get_db
 from app.models import ConversationMessageV2, Project, RestructureSuggestion, ThinkingNode
 from app.schemas.v2 import TurnRequest, TurnResponse, WorkspaceResponse
 from app.services.incubator_orchestrator import ensure_root_node, run_turn
+from app.services.map_update_service import apply_map_operations
 
 router = APIRouter(prefix="/v2", tags=["v2"])
 
@@ -38,7 +40,10 @@ def build_workspace(db: Session, project: Project) -> dict:
     )
     suggestions = (
         db.query(RestructureSuggestion)
-        .filter(RestructureSuggestion.project_id == project.id)
+        .filter(
+            RestructureSuggestion.project_id == project.id,
+            RestructureSuggestion.status == "pending",
+        )
         .order_by(RestructureSuggestion.created_at.asc())
         .all()
     )
@@ -70,3 +75,34 @@ def create_turn(project_id: UUID, request: TurnRequest, db: Session = Depends(ge
         "user_message": user_message,
         "assistant_message": assistant_message,
     }
+
+
+@router.post("/restructure-suggestions/{suggestion_id}/reject", response_model=WorkspaceResponse)
+def reject_suggestion(suggestion_id: UUID, db: Session = Depends(get_db)) -> dict:
+    suggestion = db.query(RestructureSuggestion).filter(RestructureSuggestion.id == suggestion_id).first()
+    if not suggestion:
+        raise HTTPException(status_code=404, detail="Suggestion not found")
+
+    suggestion.status = "rejected"
+    suggestion.resolved_at = datetime.utcnow()
+    project = get_project_or_404(db, suggestion.project_id)
+    db.commit()
+    return build_workspace(db, project)
+
+
+@router.post("/restructure-suggestions/{suggestion_id}/accept", response_model=WorkspaceResponse)
+def accept_suggestion(suggestion_id: UUID, db: Session = Depends(get_db)) -> dict:
+    suggestion = db.query(RestructureSuggestion).filter(RestructureSuggestion.id == suggestion_id).first()
+    if not suggestion:
+        raise HTTPException(status_code=404, detail="Suggestion not found")
+
+    try:
+        apply_map_operations(db, suggestion.project_id, suggestion.operations)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    suggestion.status = "accepted"
+    suggestion.resolved_at = datetime.utcnow()
+    project = get_project_or_404(db, suggestion.project_id)
+    db.commit()
+    return build_workspace(db, project)

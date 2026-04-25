@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core.database import Base, get_db
 from app.main import app
-from app.models import Project, ThinkingNode, User
+from app.models import Project, RestructureSuggestion, ThinkingNode, User
 
 
 TEST_DATABASE_URL = "sqlite:///./test_v2_api.db"
@@ -159,3 +159,86 @@ def test_turn_creates_messages_and_question_node(client, project_id):
     assert len(question_nodes) >= 1
     assert question_nodes[0]["parent_id"] is not None
     assert question_nodes[0]["question"]
+
+
+def test_reject_missing_suggestion_returns_404(client):
+    response = client.post(f"/api/v2/restructure-suggestions/{uuid4()}/reject")
+
+    assert response.status_code == 404
+
+
+def test_reject_suggestion_marks_resolved_and_hides_it(client, project_id):
+    db = TestingSessionLocal()
+    try:
+        suggestion = RestructureSuggestion(
+            project_id=project_id,
+            status="pending",
+            operations=[],
+            rationale="No longer useful.",
+        )
+        db.add(suggestion)
+        db.commit()
+        db.refresh(suggestion)
+        suggestion_id = suggestion.id
+    finally:
+        db.close()
+
+    response = client.post(f"/api/v2/restructure-suggestions/{suggestion_id}/reject")
+
+    assert response.status_code == 200
+    assert response.json()["suggestions"] == []
+
+    db = TestingSessionLocal()
+    try:
+        resolved = db.query(RestructureSuggestion).filter(RestructureSuggestion.id == suggestion_id).one()
+        assert resolved.status == "rejected"
+        assert resolved.resolved_at is not None
+    finally:
+        db.close()
+
+
+def test_accept_suggestion_applies_operation_and_hides_it(client, project_id):
+    db = TestingSessionLocal()
+    try:
+        root = ThinkingNode(
+            project_id=project_id,
+            parent_id=None,
+            kind="idea",
+            status="confirmed",
+            title="Original title",
+            sort_order=0,
+            layout={"x": 0, "y": 0},
+            source_message_ids=[],
+            confidence=100,
+        )
+        db.add(root)
+        db.flush()
+
+        suggestion = RestructureSuggestion(
+            project_id=project_id,
+            status="pending",
+            operations=[{"type": "rename_node", "node_id": str(root.id), "title": "Sharper title"}],
+            rationale="The title is now more specific.",
+        )
+        db.add(suggestion)
+        db.commit()
+        db.refresh(suggestion)
+        suggestion_id = suggestion.id
+        root_id = root.id
+    finally:
+        db.close()
+
+    response = client.post(f"/api/v2/restructure-suggestions/{suggestion_id}/accept")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["suggestions"] == []
+    assert any(node["id"] == str(root_id) and node["title"] == "Sharper title" for node in data["nodes"])
+
+    db = TestingSessionLocal()
+    try:
+        resolved = db.query(RestructureSuggestion).filter(RestructureSuggestion.id == suggestion_id).one()
+        assert resolved.status == "accepted"
+        assert resolved.resolved_at is not None
+    finally:
+        db.close()

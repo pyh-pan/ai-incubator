@@ -12,7 +12,7 @@ import type { ThinkingNode } from '../types/incubator'
 export default function IncubatorWorkspacePage() {
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
-  const { workspace, isLoading, isThinking, submitTurn } = useIncubatorSession(projectId)
+  const { workspace, isLoading, isThinking, submitTurn, acceptSuggestion, rejectSuggestion } = useIncubatorSession(projectId)
   const [selectedNode, setSelectedNode] = useState<ThinkingNode | null>(null)
 
   if (isLoading || !workspace) {
@@ -42,7 +42,11 @@ export default function IncubatorWorkspacePage() {
         />
         <MindmapCanvas nodes={workspace.nodes} selectedNodeId={selectedNode?.id ?? null} onSelectNode={setSelectedNode} />
         <NodeInspector node={selectedNode} />
-        <RestructureSuggestionPanel suggestions={workspace.suggestions} />
+        <RestructureSuggestionPanel
+          suggestions={workspace.suggestions}
+          onAccept={acceptSuggestion}
+          onReject={rejectSuggestion}
+        />
       </main>
     </div>
   )
