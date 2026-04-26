@@ -1,6 +1,6 @@
 import { ArrowLeftOutlined } from '@ant-design/icons'
 import { Button, Spin, Tag } from 'antd'
-import { useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import ChatPanel from '../components/incubator/ChatPanel'
 import MindmapCanvas from '../components/incubator/MindmapCanvas'
@@ -14,6 +14,15 @@ export default function IncubatorWorkspacePage() {
   const { workspace, isLoading, isThinking, submitTurn, answerNode, acceptSuggestion, rejectSuggestion } = useIncubatorSession(projectId)
   const [selectedNode, setSelectedNode] = useState<ThinkingNode | null>(null)
   const [leftWidth, setLeftWidth] = useState(340)
+  const [isNarrow, setIsNarrow] = useState(() => window.matchMedia('(max-width: 900px)').matches)
+
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 900px)')
+    const update = () => setIsNarrow(query.matches)
+    update()
+    query.addEventListener('change', update)
+    return () => query.removeEventListener('change', update)
+  }, [])
 
   const startResize = (event: ReactPointerEvent<HTMLDivElement>) => {
     event.preventDefault()
@@ -49,7 +58,14 @@ export default function IncubatorWorkspacePage() {
         {workspace.thinking_stage && <Tag color="geekblue">{workspace.thinking_stage}</Tag>}
         {workspace.thinking_mode && <Tag color="purple">{workspace.thinking_mode}</Tag>}
       </header>
-      <main className="flex-1 grid min-h-0 relative" style={{ gridTemplateColumns: `${leftWidth}px 6px minmax(0, 1fr)` }}>
+      <main
+        className="flex-1 grid min-h-0 relative"
+        style={
+          isNarrow
+            ? { gridTemplateRows: 'minmax(360px, 52vh) 6px minmax(360px, 1fr)' }
+            : { gridTemplateColumns: `${leftWidth}px 6px minmax(0, 1fr)` }
+        }
+      >
         <ChatPanel
           messages={workspace.messages}
           selectedNode={selectedNode}
@@ -57,9 +73,13 @@ export default function IncubatorWorkspacePage() {
           onSubmit={(content) => submitTurn({ content, source: 'chat' })}
         />
         <div
-          className="cursor-col-resize border-r border-slate-200 bg-slate-100 hover:bg-sky-100"
-          onPointerDown={startResize}
-          aria-label="调整左侧宽度"
+          className={
+            isNarrow
+              ? 'border-b border-slate-200 bg-slate-100'
+              : 'cursor-col-resize border-r border-slate-200 bg-slate-100 hover:bg-sky-100'
+          }
+          onPointerDown={isNarrow ? undefined : startResize}
+          aria-label={isNarrow ? '调整对话高度' : '调整左侧宽度'}
         />
         <MindmapCanvas
           nodes={workspace.nodes}

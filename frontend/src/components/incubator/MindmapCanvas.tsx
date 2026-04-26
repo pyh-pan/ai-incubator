@@ -20,14 +20,14 @@ interface LayoutNode {
   depth: number
 }
 
-const NODE_WIDTH = 264
-const NODE_HEIGHT = 82
+const NODE_WIDTH = 226
+const NODE_HEIGHT = 74
 const ROOT_WIDTH = 286
 const ROOT_HEIGHT = 92
-const GAP_X = 356
-const GAP_Y = 28
+const GAP_X = 304
+const GAP_Y = 18
 const TOP_PAD = 42
-const LEFT_PAD = 48
+const LEFT_PAD = 36
 
 const statusText: Record<ThinkingNode['status'], string> = {
   open: '待回答',
@@ -85,7 +85,7 @@ function buildLayout(nodes: ThinkingNode[]) {
     if (parent) links.push([parent, item])
   })
 
-  const width = Math.max(760, Math.max(...layoutNodes.map((item) => item.x + item.width)) + 420)
+  const width = Math.max(720, Math.max(...layoutNodes.map((item) => item.x + item.width)) + 120)
   const height = Math.max(420, Math.max(...layoutNodes.map((item) => item.y + item.height)) + 100)
   return { layoutNodes, width, height, links }
 }
@@ -127,7 +127,7 @@ export default function MindmapCanvas({
         {nodes.filter((node) => node.kind === 'question' || node.kind === 'followup').length} 个问题节点
       </div>
 
-      <div className="relative" style={{ width, height }}>
+      <div className="relative mx-auto" style={{ width, height }}>
         <svg className="absolute inset-0 pointer-events-none" width={width} height={height}>
           {links.map(([parent, child]) => (
             <path
