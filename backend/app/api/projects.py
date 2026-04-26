@@ -6,7 +6,16 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import get_current_user_id
-from app.models import MindmapNode, Project
+from app.models import (
+    ConversationHistory,
+    ConversationMessageV2,
+    EvolutionHistory,
+    IncubatorRun,
+    MindmapNode,
+    Project,
+    RestructureSuggestion,
+    ThinkingNode,
+)
 from app.schemas.node import NodeResponse
 from app.schemas.project import ProjectCreate, ProjectResponse
 
@@ -46,7 +55,7 @@ def list_projects(
 
 @router.get("/{project_id}", response_model=ProjectResponse)
 def get_project(
-    project_id: str,
+    project_id: UUID,
     user_id: UUID = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ) -> Project:
@@ -59,7 +68,7 @@ def get_project(
 
 @router.put("/{project_id}", response_model=ProjectResponse)
 def update_project(
-    project_id: str,
+    project_id: UUID,
     project_data: dict[str, Any],
     user_id: UUID = Depends(get_current_user_id),
     db: Session = Depends(get_db),
@@ -80,7 +89,7 @@ def update_project(
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_project(
-    project_id: str,
+    project_id: UUID,
     user_id: UUID = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ) -> None:
@@ -89,6 +98,21 @@ def delete_project(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
+    mindmap_node_ids = [
+        node_id
+        for (node_id,) in db.query(MindmapNode.id)
+        .filter(MindmapNode.project_id == project.id)
+        .all()
+    ]
+    if mindmap_node_ids:
+        db.query(EvolutionHistory).filter(EvolutionHistory.node_id.in_(mindmap_node_ids)).delete(synchronize_session=False)
+    db.query(ConversationHistory).filter(ConversationHistory.project_id == project.id).delete(synchronize_session=False)
+
+    db.query(IncubatorRun).filter(IncubatorRun.project_id == project.id).delete(synchronize_session=False)
+    db.query(RestructureSuggestion).filter(RestructureSuggestion.project_id == project.id).delete(synchronize_session=False)
+    db.query(ConversationMessageV2).filter(ConversationMessageV2.project_id == project.id).delete(synchronize_session=False)
+    db.query(ThinkingNode).filter(ThinkingNode.project_id == project.id).delete(synchronize_session=False)
+
     db.delete(project)
     db.commit()
     return None
@@ -96,7 +120,7 @@ def delete_project(
 
 @router.get("/{project_id}/mindmap", response_model=list[NodeResponse])
 def get_project_mindmap(
-    project_id: str,
+    project_id: UUID,
     user_id: UUID = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ) -> list[MindmapNode]:

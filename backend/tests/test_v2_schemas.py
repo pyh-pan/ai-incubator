@@ -6,7 +6,18 @@ from uuid import UUID, uuid4
 import pytest
 from pydantic import ValidationError
 
-from app.schemas.v2 import ConversationMessageResponse, MapOperation, RestructureSuggestionResponse, ThinkingNodeResponse, TurnRequest, WorkspaceResponse
+from app.schemas.v2 import (
+    AnswerMatchResponse,
+    CenterContext,
+    ConversationMessageResponse,
+    MapOperation,
+    RestructureSuggestionResponse,
+    ThinkingAgentOutput,
+    ThinkingNodeResponse,
+    ThinkingQuestion,
+    TurnRequest,
+    WorkspaceResponse,
+)
 from app.schemas.v2 import ThinkingMode, ThinkingStage
 
 
@@ -84,6 +95,37 @@ def test_workspace_and_message_response_use_tight_schema_types():
     assert set(get_args(WorkspaceResponse.__annotations__["thinking_stage"])) == {ThinkingStage, type(None)}
 
 
+def test_thinking_agent_output_accepts_question_batch():
+    output = ThinkingAgentOutput(
+        context_sufficiency="sufficient",
+        thinking_questions=[
+            ThinkingQuestion(
+                question="谁会最迫切地使用这个产品？他们现在如何解决？",
+                short_title="目标用户",
+                why_this_matters="先定位强需求人群，避免泛泛讨论功能。",
+                expected_answer_type="具体用户画像和当前替代方案",
+            )
+        ],
+        reasoning_trace={
+            "visible_summary": "背景足够，先从目标用户切入。",
+            "audit_notes": {"signal": "has idea and background"},
+        },
+    )
+
+    assert output.context_sufficiency == "sufficient"
+    assert output.thinking_questions[0].short_title == "目标用户"
+    assert output.background_questions == []
+
+
+def test_workspace_response_exposes_center_context_and_matches():
+    response_fields = WorkspaceResponse.model_fields
+
+    assert "center_context" in response_fields
+    assert "answer_matches" in response_fields
+    assert CenterContext.model_fields["context_sufficiency"]
+    assert AnswerMatchResponse.model_fields["confidence"]
+
+
 def test_uuid_fields_serialize_to_json_strings():
     node_id = uuid4()
     project_id = uuid4()
@@ -115,6 +157,7 @@ def test_uuid_fields_serialize_to_json_strings():
         title="V2 workspace",
         thinking_mode="clarify",
         thinking_stage="discover",
+        center_context=CenterContext(original_idea="V2 workspace"),
         messages=[],
         nodes=[],
         suggestions=[],

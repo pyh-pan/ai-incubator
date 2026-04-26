@@ -52,6 +52,90 @@ def ensure_root_node(db: Session, project: Project) -> tuple[ThinkingNode, bool]
     return root_node, True
 
 
+def bootstrap_initial_question(db: Session, project: Project) -> bool:
+    existing_message = (
+        db.query(ConversationMessageV2.id)
+        .filter(ConversationMessageV2.project_id == project.id)
+        .first()
+    )
+    if existing_message:
+        return False
+
+    root_node, _ = ensure_root_node(db, project)
+    signals = build_signals(db, project.id)
+    recommendation = recommend_thinking_mode(signals)
+    initial_content = project.title
+    if project.more_info:
+        initial_content = f"{project.title}\n\n背景信息：{project.more_info}"
+
+    request = TurnRequest(content=initial_content, source="chat")
+    ai_context = build_ai_context(project, request, signals, recommendation.mode, root_node)
+    ai_output = call_ai_orchestrator(initial_content, recommendation.mode, ai_context)
+
+    assistant_message = ConversationMessageV2(
+        project_id=project.id,
+        role="assistant",
+        source="system",
+        content=ai_output.assistant_message,
+        thinking_mode=ai_output.thinking_mode,
+        stage=ai_output.stage,
+        message_metadata={
+            "mode_reason": ai_output.mode_reason,
+            "next_question": ai_output.next_question,
+            "question_intent": ai_output.question_intent,
+            "detected_gaps": ai_output.detected_gaps,
+            "bootstrap": True,
+        },
+    )
+    db.add(assistant_message)
+    db.flush()
+
+    next_sort_order = db.query(func.count(ThinkingNode.id)).filter(ThinkingNode.project_id == project.id).scalar() or 0
+    for update in ai_output.map_updates:
+        operation = update.operation
+        if operation.type != "create_node":
+            continue
+        node = ThinkingNode(
+            project_id=project.id,
+            parent_id=operation.parent_id or root_node.id,
+            kind=operation.kind or "question",
+            status=operation.status or "open",
+            title=operation.title or ai_output.next_question,
+            summary=operation.summary,
+            question=operation.question or ai_output.next_question,
+            sort_order=next_sort_order,
+            layout={"x": 240, "y": 120 + (next_sort_order * 80)},
+            source_message_ids=[str(assistant_message.id)],
+            confidence=80,
+        )
+        next_sort_order += 1
+        db.add(node)
+
+    project.thinking_mode = ai_output.thinking_mode
+    project.thinking_stage = ai_output.stage
+    project.summary_snapshot = ai_output.current_summary.model_dump(mode="json")
+
+    configured_client = get_ai_client()
+    db.add(
+        IncubatorRun(
+            project_id=project.id,
+            user_message_id=None,
+            assistant_message_id=assistant_message.id,
+            model=get_model() if configured_client else "mock-v2",
+            input_payload={
+                "content": initial_content,
+                "source": "system",
+                "signals": signals.__dict__,
+                "context": ai_context,
+                "bootstrap": True,
+            },
+            output_payload=ai_output.model_dump(mode="json"),
+            latency_ms=0,
+        )
+    )
+    return True
+
+
 def build_signals(db: Session, project_id) -> ThinkingStateSignals:
     turn_count = (
         db.query(func.count(ConversationMessageV2.id))
@@ -240,6 +324,18 @@ def run_turn(
     ai_func=call_ai_orchestrator,
 ) -> tuple[ConversationMessageV2, ConversationMessageV2]:
     root_node, _ = ensure_root_node(db, project)
+    request_node_id = None
+    if request.node_id:
+        request_node = (
+            db.query(ThinkingNode.id)
+            .filter(
+                ThinkingNode.project_id == project.id,
+                ThinkingNode.id == request.node_id,
+            )
+            .first()
+        )
+        request_node_id = request.node_id if request_node else None
+
     signals = build_signals(db, project.id)
     signals.user_requested_action_plan = "plan" in request.content.lower() or "next step" in request.content.lower()
     signals.user_expressed_confusion = "confused" in request.content.lower() or "unclear" in request.content.lower()
@@ -247,7 +343,7 @@ def run_turn(
 
     user_message = ConversationMessageV2(
         project_id=project.id,
-        node_id=request.node_id,
+        node_id=request_node_id,
         role="user",
         source=request.source,
         content=request.content,
@@ -280,9 +376,21 @@ def run_turn(
         operation = update.operation
         if operation.type != "create_node":
             continue
+        parent_id = operation.parent_id or root_node.id
+        parent_exists = (
+            db.query(ThinkingNode.id)
+            .filter(
+                ThinkingNode.project_id == project.id,
+                ThinkingNode.id == parent_id,
+            )
+            .first()
+        )
+        if not parent_exists:
+            parent_id = root_node.id
+
         node = ThinkingNode(
             project_id=project.id,
-            parent_id=operation.parent_id or root_node.id,
+            parent_id=parent_id,
             kind=operation.kind,
             status=operation.status or "open",
             title=operation.title,
@@ -298,7 +406,11 @@ def run_turn(
 
     project.thinking_mode = ai_output.thinking_mode
     project.thinking_stage = ai_output.stage
-    project.summary_snapshot = ai_output.current_summary.model_dump(mode="json")
+    existing_snapshot = project.summary_snapshot if isinstance(project.summary_snapshot, dict) else {}
+    project.summary_snapshot = {
+        **existing_snapshot,
+        **ai_output.current_summary.model_dump(mode="json"),
+    }
 
     configured_client = get_ai_client()
     db.add(

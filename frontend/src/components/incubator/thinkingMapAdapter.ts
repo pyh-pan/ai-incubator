@@ -10,6 +10,7 @@ const kindText: Record<ThinkingNode['kind'], string> = {
   decision: '决策',
   risk: '风险',
   next_step: '下一步',
+  followup: '追问',
 }
 
 const branchColors: Record<ThinkingNode['kind'], string> = {
@@ -21,6 +22,7 @@ const branchColors: Record<ThinkingNode['kind'], string> = {
   decision: '#16a34a',
   risk: '#dc2626',
   next_step: '#4f46e5',
+  followup: '#0891b2',
 }
 
 export function buildMindElixirData(nodes: ThinkingNode[]): MindElixirData {

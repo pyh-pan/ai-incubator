@@ -34,11 +34,23 @@ export function useIncubatorSession(projectId: string | undefined) {
     },
   })
 
+  const nodeAnswerMutation = useMutation({
+    mutationFn: ({ nodeId, content }: { nodeId: string; content: string }) =>
+      incubatorApi.answerNode(projectId!, nodeId, { content }),
+    onSuccess: (data) => {
+      queryClient.setQueryData<WorkspaceResponse>(['v2-workspace', projectId], data)
+    },
+    onError: (error: ApiError) => {
+      message.error(error.response?.data?.detail || '回答节点失败，请重试')
+    },
+  })
+
   return {
     workspace: workspaceQuery.data,
     isLoading: workspaceQuery.isLoading,
-    isThinking: turnMutation.isPending || suggestionMutation.isPending,
+    isThinking: turnMutation.isPending || suggestionMutation.isPending || nodeAnswerMutation.isPending,
     submitTurn: turnMutation.mutate,
+    answerNode: (nodeId: string, content: string) => nodeAnswerMutation.mutate({ nodeId, content }),
     acceptSuggestion: (id: string) => suggestionMutation.mutate({ id, action: 'accept' }),
     rejectSuggestion: (id: string) => suggestionMutation.mutate({ id, action: 'reject' }),
   }

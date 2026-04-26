@@ -7,11 +7,79 @@ from pydantic import BaseModel, Field
 
 ThinkingMode = Literal["diverge", "converge", "clarify", "challenge", "validate"]
 ThinkingStage = Literal["discover", "define", "develop", "deliver"]
-NodeKind = Literal["idea", "question", "answer", "insight", "assumption", "decision", "risk", "next_step"]
-NodeStatus = Literal["open", "answered", "suggested", "confirmed"]
+ContextSufficiency = Literal["unknown", "insufficient", "sufficient"]
+AnswerMatchConfidence = Literal["high", "medium", "low"]
+NodeKind = Literal["idea", "question", "answer", "insight", "assumption", "decision", "risk", "next_step", "followup"]
+NodeStatus = Literal["open", "answered", "suggested", "confirmed", "needs_context", "resolved"]
 MessageRole = Literal["user", "assistant"]
 MessageSource = Literal["chat", "node"]
 OperationType = Literal["create_node", "update_node", "mark_answered", "move_node", "rename_node", "merge_nodes", "split_node", "delete_node"]
+
+
+class CenterContext(BaseModel):
+    original_idea: str
+    idea_summary: str | None = None
+    background_summary: str | None = None
+    known_facts: list[str] = Field(default_factory=list)
+    assumptions: list[str] = Field(default_factory=list)
+    constraints: list[str] = Field(default_factory=list)
+    target_users: list[str] = Field(default_factory=list)
+    desired_outcomes: list[str] = Field(default_factory=list)
+    unresolved_context_gaps: list[str] = Field(default_factory=list)
+    context_sufficiency: ContextSufficiency = "unknown"
+
+
+class ReasoningTrace(BaseModel):
+    visible_summary: str
+    audit_notes: dict[str, Any] = Field(default_factory=dict)
+
+
+class BackgroundQuestion(BaseModel):
+    question: str
+    why_needed: str
+    expected_signal: str
+
+
+class ThinkingQuestion(BaseModel):
+    question: str
+    short_title: str
+    why_this_matters: str
+    expected_answer_type: str
+
+
+class FollowUpQuestion(ThinkingQuestion):
+    parent_question_id: UUID
+
+
+class AnswerMatch(BaseModel):
+    node_id: UUID
+    extracted_answer: str
+    confidence: AnswerMatchConfidence
+
+
+class ThinkingAgentOutput(BaseModel):
+    context_sufficiency: Literal["insufficient", "sufficient"]
+    background_questions: list[BackgroundQuestion] = Field(default_factory=list)
+    thinking_questions: list[ThinkingQuestion] = Field(default_factory=list)
+    follow_up_questions: list[FollowUpQuestion] = Field(default_factory=list)
+    answer_matches: list[AnswerMatch] = Field(default_factory=list)
+    reasoning_trace: ReasoningTrace
+
+
+class AnswerMatchResponse(BaseModel):
+    id: UUID
+    project_id: UUID
+    status: str
+    matches: list[AnswerMatch]
+    original_content: str
+    confidence: AnswerMatchConfidence = "medium"
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class NodeAnswerRequest(BaseModel):
+    content: str = Field(min_length=1, max_length=8000)
 
 
 class ThinkingNodeResponse(BaseModel):
@@ -112,9 +180,11 @@ class WorkspaceResponse(BaseModel):
     title: str
     thinking_mode: ThinkingMode | None
     thinking_stage: ThinkingStage | None
+    center_context: CenterContext
     messages: list[ConversationMessageResponse]
     nodes: list[ThinkingNodeResponse]
     suggestions: list[RestructureSuggestionResponse]
+    answer_matches: list[AnswerMatchResponse] = Field(default_factory=list)
 
 
 class TurnResponse(WorkspaceResponse):
