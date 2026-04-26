@@ -47,11 +47,11 @@ export default function MainLayout({ children }: { children?: ReactNode }) {
 
   return (
     <Layout className="min-h-screen bg-sky-50">
-      <Layout.Header className="bg-white border-b border-sky-200 px-6 sticky top-0 z-50 shadow-sm">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <div className="flex items-center gap-4">
+      <Layout.Header className="bg-white border-b border-sky-200 px-3 sm:px-6 sticky top-0 z-50 shadow-sm">
+        <div className="flex items-center justify-between gap-3 max-w-7xl mx-auto">
+          <div className="flex items-center gap-4 shrink-0">
             <h1
-              className="text-2xl font-semibold text-sky-600 cursor-pointer"
+              className="text-xl sm:text-2xl font-semibold leading-none whitespace-nowrap text-sky-600 cursor-pointer"
               onClick={() => navigate('/projects')}
             >
               AI Incubator
@@ -61,16 +61,16 @@ export default function MainLayout({ children }: { children?: ReactNode }) {
           <Menu
             mode="horizontal"
             items={menuItems}
-            className="border-0 bg-transparent flex-1 justify-center"
+            className="border-0 bg-transparent hidden sm:flex flex-1 justify-center min-w-0"
           />
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 shrink-0">
             <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
-              <div className="flex items-center gap-2 cursor-pointer hover:bg-sky-50 px-3 py-2 rounded-lg transition-colors">
+              <div className="flex items-center gap-2 cursor-pointer hover:bg-sky-50 px-2 sm:px-3 py-2 rounded-lg transition-colors">
                 <Avatar size="default" className="bg-sky-500">
                   {user?.username?.charAt(0).toUpperCase() || 'U'}
                 </Avatar>
-                <span className="text-sm text-slate-700">{user?.username || 'User'}</span>
+                <span className="hidden sm:inline text-sm text-slate-700">{user?.username || 'User'}</span>
               </div>
             </Dropdown>
           </div>
