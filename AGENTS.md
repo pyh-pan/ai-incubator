@@ -18,6 +18,8 @@ When local and remote code disagree, do not merge blindly. Identify the product 
 
 Use worktrees for larger integration or refactor work. Never revert user changes or destructive-edit the working tree unless explicitly instructed.
 
+This repository is solo-maintained. When the user asks to ship completed work, merge directly into `main` and push to the remote; do not create or recommend a pull request unless the user explicitly asks for one.
+
 ## Implementation Standards
 
 Keep backend API contracts explicit and tested. Authentication-protected endpoints must return consistent `401` responses for missing or invalid credentials.
